@@ -25,6 +25,11 @@ impl Mul<f64> for Vec3 {
     fn mul(self, s: f64) -> Vec3 { Vec3 { x: self.x * s, y: self.y * s, z: self.z * s } }
 }
 
+impl Mul<Vec3> for f64 {
+    type Output = Vec3;
+    fn mul(self, v: Vec3) -> Vec3 { v * self }
+}
+
 impl Mul<Vec3> for Vec3 {
     type Output = Vec3;
     fn mul(self, o: Vec3) -> Vec3 { Vec3 { x: self.x * o.x, y: self.y * o.y, z: self.z * o.z } }
@@ -91,6 +96,15 @@ mod tests {
     fn test_mul() {
         let a = Vec3 { x: 1.0, y: -2.0, z: 3.0 };
         let r = a * 2.0;
+        assert_eq!(r.x, 2.0);
+        assert_eq!(r.y, -4.0);
+        assert_eq!(r.z, 6.0);
+    }
+
+    #[test]
+    fn test_mul_scalar_left() {
+        let a = Vec3 { x: 1.0, y: -2.0, z: 3.0 };
+        let r = 2.0 * a;
         assert_eq!(r.x, 2.0);
         assert_eq!(r.y, -4.0);
         assert_eq!(r.z, 6.0);

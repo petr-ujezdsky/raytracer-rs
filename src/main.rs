@@ -6,6 +6,8 @@ mod vec3;
 mod color;
 use color::{Color, write_color};
 
+mod ray;
+
 fn main() {
     println!("Printing image");
 
@@ -38,5 +40,5 @@ fn write_to_file(width: u32, height: u32) {
 
     // Flush the buffer to make sure everything is actually written to disk
     writer.flush().expect("Failed to flush buffer");
-    println!("Done 🎉");
+    println!("Done ??");
 }
