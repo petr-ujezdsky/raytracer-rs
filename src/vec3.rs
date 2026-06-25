@@ -25,6 +25,11 @@ impl Mul<f64> for Vec3 {
     fn mul(self, s: f64) -> Vec3 { Vec3 { x: self.x * s, y: self.y * s, z: self.z * s } }
 }
 
+impl Mul<Vec3> for Vec3 {
+    type Output = Vec3;
+    fn mul(self, o: Vec3) -> Vec3 { Vec3 { x: self.x * o.x, y: self.y * o.y, z: self.z * o.z } }
+}
+
 impl Div<f64> for Vec3 {
     type Output = Vec3;
     fn div(self, s: f64) -> Vec3 { Vec3 { x: self.x / s, y: self.y / s, z: self.z / s } }
@@ -73,6 +78,16 @@ mod tests {
         assert_eq!(r.x, 2.0);
         assert_eq!(r.y, -4.0);
         assert_eq!(r.z, 6.0);
+    }
+
+    #[test]
+    fn test_mul_vec3() {
+        let a = Vec3 { x: 1.0, y: -2.0, z: 3.0 };
+        let b = Vec3 { x: 4.0, y: 5.0, z: -6.0 };
+        let r = a * b;
+        assert_eq!(r.x, 4.0);
+        assert_eq!(r.y, -10.0);
+        assert_eq!(r.z, -18.0);
     }
 
     #[test]
