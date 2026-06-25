@@ -30,6 +30,11 @@ impl Mul<Vec3> for f64 {
     fn mul(self, v: Vec3) -> Vec3 { v * self }
 }
 
+impl Mul<Vec3> for i32 {
+    type Output = Vec3;
+    fn mul(self, v: Vec3) -> Vec3 { self as f64 * v }
+}
+
 impl Mul<Vec3> for Vec3 {
     type Output = Vec3;
     fn mul(self, o: Vec3) -> Vec3 { Vec3 { x: self.x * o.x, y: self.y * o.y, z: self.z * o.z } }
@@ -38,6 +43,11 @@ impl Mul<Vec3> for Vec3 {
 impl Div<f64> for Vec3 {
     type Output = Vec3;
     fn div(self, s: f64) -> Vec3 { Vec3 { x: self.x / s, y: self.y / s, z: self.z / s } }
+}
+
+impl Div<i32> for Vec3 {
+    type Output = Vec3;
+    fn div(self, s: i32) -> Vec3 { self / s as f64 }
 }
 
 // impl Div<f64> for Vec3 {
@@ -111,6 +121,15 @@ mod tests {
     }
 
     #[test]
+    fn test_mul_i32_left() {
+        let a = Vec3 { x: 1.0, y: -2.0, z: 3.0 };
+        let r = 2 * a; // i32 * Vec3
+        assert_eq!(r.x, 2.0);
+        assert_eq!(r.y, -4.0);
+        assert_eq!(r.z, 6.0);
+    }
+
+    #[test]
     fn test_mul_vec3() {
         let a = Vec3 { x: 1.0, y: -2.0, z: 3.0 };
         let b = Vec3 { x: 4.0, y: 5.0, z: -6.0 };
@@ -124,6 +143,15 @@ mod tests {
     fn test_div() {
         let a = Vec3 { x: 2.0, y: -4.0, z: 6.0 };
         let r = a / 2.0;
+        assert_eq!(r.x, 1.0);
+        assert_eq!(r.y, -2.0);
+        assert_eq!(r.z, 3.0);
+    }
+
+    #[test]
+    fn test_div_i32() {
+        let a = Vec3 { x: 2.0, y: -4.0, z: 6.0 };
+        let r = a / 2; // Vec3 / i32
         assert_eq!(r.x, 1.0);
         assert_eq!(r.y, -2.0);
         assert_eq!(r.z, 3.0);
