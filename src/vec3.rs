@@ -59,6 +59,10 @@ impl Vec3 {
     }
 }
 
+pub fn unit_vector(v: Vec3) -> Vec3 { v / v.length() }
+
+pub fn dot(u:Vec3, v: Vec3) -> f64 { u.x * v.x + u.y * v.y + u.z * v.z }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,6 +138,14 @@ mod tests {
     }
 
     #[test]
+    fn test_dot_2() {
+        let a = Vec3 { x: 1.0, y: 2.0, z: 3.0 };
+        let b = Vec3 { x: 4.0, y: -5.0, z: 6.0 };
+        // 1*4 + 2*(-5) + 3*6 = 4 - 10 + 18 = 12
+        assert_eq!(dot(a, b), 12.0);
+    }
+
+    #[test]
     fn test_cross() {
         // Standard basis: x × y = z
         let x = Vec3 { x: 1.0, y: 0.0, z: 0.0 };
@@ -151,5 +163,18 @@ mod tests {
         assert_eq!(c.x, -3.0);
         assert_eq!(c.y, 6.0);
         assert_eq!(c.z, -3.0);
+    }
+
+    #[test]
+    fn test_unit_vector() {
+        let v = Vec3 { x: 2.0, y: 3.0, z: 6.0 };
+        let u = unit_vector(v);
+        // length is 7, so the normalized components are (2/7, 3/7, 6/7)
+        assert_eq!(u.x, 2.0 / 7.0);
+        assert_eq!(u.y, 3.0 / 7.0);
+        assert_eq!(u.z, 6.0 / 7.0);
+
+        // The length of a unit vector must be 1 (allowing for floating point error)
+        assert!((u.length() - 1.0).abs() < 1e-10);
     }
 }
