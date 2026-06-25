@@ -7,6 +7,9 @@ pub struct Vec3 {
     pub z: f64,
 }
 
+/// Type alias for Vec3 used to represent a point in 3D space.
+pub type Point3 = Vec3;
+
 impl Add for Vec3 {
     type Output = Vec3;
     fn add(self, o: Vec3) -> Vec3 { Vec3 { x: self.x + o.x, y: self.y + o.y, z: self.z + o.z } }
@@ -89,4 +92,3 @@ mod tests {
         assert_eq!(a.dot(b), 12.0);
     }
 }
-
