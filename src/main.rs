@@ -1,6 +1,11 @@
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
+mod vec3;
+
+mod color;
+use color::{Color, write_color};
+
 fn main() {
     println!("Printing image");
 
@@ -22,15 +27,12 @@ fn write_to_file(width: u32, height: u32) {
         println!("Scanlines remaining {}", height - j);
 
         for i in 0..width {
-            let r = i as f32 / (width - 1) as f32;
-            let g = j as f32 / (height - 1) as f32;
-            let b = 0f32;
+            let r = i as f64 / (width - 1) as f64;
+            let g = j as f64 / (height - 1) as f64;
+            let b = 0f64;
 
-            let ir = (255.999 * r) as u32;
-            let ig = (255.999 * g) as u32;
-            let ib = (255.999 * b) as u32;
-
-            writeln!(writer, "{} {} {}", ir, ig, ib).expect("Failed to write data");
+            let pixel_color = Color { x: r, y: g, z: b };
+            write_color(&mut writer, pixel_color);
         }
     }
 
