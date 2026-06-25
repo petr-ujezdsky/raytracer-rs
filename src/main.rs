@@ -19,6 +19,8 @@ fn write_to_file(width: u32, height: u32) {
 
     // Then write data incrementally in a for loop
     for j in 0..height {
+        println!("Scanlines remaining {}", height - j);
+
         for i in 0..width {
             let r = i as f32 / (width - 1) as f32;
             let g = j as f32 / (height - 1) as f32;
@@ -34,4 +36,5 @@ fn write_to_file(width: u32, height: u32) {
 
     // Flush the buffer to make sure everything is actually written to disk
     writer.flush().expect("Failed to flush buffer");
+    println!("Done 🎉");
 }
