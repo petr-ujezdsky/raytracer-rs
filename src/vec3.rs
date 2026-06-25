@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Sub, Div};
+use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Vec3 {
@@ -44,6 +44,10 @@ impl Div<f64> for Vec3 {
 // }
 
 impl Vec3 {
+    pub fn length(&self) -> f64 { self.length_squared().sqrt() }
+
+    pub fn length_squared(&self) -> f64 { self.x * self.x + self.y * self.y + self.z * self.z }
+
     pub fn dot(self, o: Vec3) -> f64 { self.x * o.x + self.y * o.y + self.z * o.z }
 
     pub fn cross(self, o: Vec3) -> Vec3 {
@@ -105,6 +109,20 @@ mod tests {
         assert_eq!(r.x, 1.0);
         assert_eq!(r.y, -2.0);
         assert_eq!(r.z, 3.0);
+    }
+
+    #[test]
+    fn test_length_squared() {
+        let v = Vec3 { x: 2.0, y: 3.0, z: 6.0 };
+        // 2*2 + 3*3 + 6*6 = 4 + 9 + 36 = 49
+        assert_eq!(v.length_squared(), 49.0);
+    }
+
+    #[test]
+    fn test_length() {
+        let v = Vec3 { x: 2.0, y: 3.0, z: 6.0 };
+        // sqrt(49) = 7
+        assert_eq!(v.length(), 7.0);
     }
 
     #[test]
