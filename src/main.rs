@@ -18,7 +18,7 @@ fn main() {
     let image_width = 400;
 
     // Calculate the image height, and ensure that it's at least 1.
-    let image_height = max(1, image_width / aspect_ratio as i32);
+    let image_height = max(1, (image_width as f64 / aspect_ratio) as i32);
 
     // Camera
     let focal_length = 1.0;
@@ -71,7 +71,9 @@ fn main() {
 }
 
 fn ray_color(r: Ray) -> Color {
-    Color { x: 0.0, y: 0.0, z: 0.0 }
+    let unit_direction = vec3::unit_vector(r.direction);
+    let a = 0.5*(unit_direction.y + 1.0);
+    (1.0 - a) * Color::new(1.0, 1.0, 1.0) + a * Color::new(0.5, 0.7, 1.0)
 }
 
 fn write_to_file(width: u32, height: u32) {

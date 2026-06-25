@@ -59,6 +59,8 @@ impl Div<i32> for Vec3 {
 // }
 
 impl Vec3 {
+    pub fn new(x: f64, y: f64, z: f64) -> Vec3 { Vec3 { x, y, z } }
+
     pub fn length(&self) -> f64 { self.length_squared().sqrt() }
 
     pub fn length_squared(&self) -> f64 { self.x * self.x + self.y * self.y + self.z * self.z }
