@@ -45,6 +45,14 @@ impl Div<f64> for Vec3 {
 
 impl Vec3 {
     pub fn dot(self, o: Vec3) -> f64 { self.x * o.x + self.y * o.y + self.z * o.z }
+
+    pub fn cross(self, o: Vec3) -> Vec3 {
+        Vec3 {
+            x: self.y * o.z - self.z * o.y,
+            y: self.z * o.x - self.x * o.z,
+            z: self.x * o.y - self.y * o.x,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -105,5 +113,25 @@ mod tests {
         let b = Vec3 { x: 4.0, y: -5.0, z: 6.0 };
         // 1*4 + 2*(-5) + 3*6 = 4 - 10 + 18 = 12
         assert_eq!(a.dot(b), 12.0);
+    }
+
+    #[test]
+    fn test_cross() {
+        // Standard basis: x × y = z
+        let x = Vec3 { x: 1.0, y: 0.0, z: 0.0 };
+        let y = Vec3 { x: 0.0, y: 1.0, z: 0.0 };
+        let r = x.cross(y);
+        assert_eq!(r.x, 0.0);
+        assert_eq!(r.y, 0.0);
+        assert_eq!(r.z, 1.0);
+
+        // General case
+        let a = Vec3 { x: 1.0, y: 2.0, z: 3.0 };
+        let b = Vec3 { x: 4.0, y: 5.0, z: 6.0 };
+        let c = a.cross(b);
+        // (2*6 - 3*5, 3*4 - 1*6, 1*5 - 2*4) = (-3, 6, -3)
+        assert_eq!(c.x, -3.0);
+        assert_eq!(c.y, 6.0);
+        assert_eq!(c.z, -3.0);
     }
 }
