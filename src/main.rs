@@ -8,6 +8,7 @@ mod color;
 use color::{Color, write_color};
 use crate::hittable::Hittable;
 use crate::hittable_list::HittableList;
+use crate::interval::Interval;
 use crate::ray::Ray;
 use crate::sphere::Sphere;
 use crate::vec3::{Point3, Vec3};
@@ -17,6 +18,7 @@ mod hittable;
 mod sphere;
 mod hittable_list;
 mod utils;
+mod interval;
 
 fn main() {
     println!("Printing image");
@@ -83,7 +85,7 @@ fn main() {
 }
 
 fn ray_color(r: Ray, world: &dyn Hittable) -> Color {
-    if let Some(rec) = world.hit(r, 0.0, utils::INFINITY) {
+    if let Some(rec) = world.hit(r, Interval::new(0.0, utils::INFINITY)) {
         return 0.5 * (rec.normal + Color::new(1.0, 1.0, 1.0));
     }
 

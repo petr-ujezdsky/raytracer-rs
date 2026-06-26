@@ -1,3 +1,4 @@
+use crate::interval::Interval;
 use crate::ray::Ray;
 use crate::vec3::{Point3, Vec3};
 
@@ -23,9 +24,9 @@ impl HitRecord {
 
 /// Anything a ray can intersect with.
 pub trait Hittable {
-    /// Returns `Some(HitRecord)` if the ray hits the object within `[ray_tmin, ray_tmax]`,
+    /// Returns `Some(HitRecord)` if the ray `r` hits the object within given `ray_t` interval,
     /// otherwise returns `None`.
-    fn hit(&self, r: Ray, ray_tmin: f64, ray_tmax: f64) -> Option<HitRecord>;
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord>;
 }
 
 fn front_face(ray: Ray, outward_normal: Vec3) -> bool {
