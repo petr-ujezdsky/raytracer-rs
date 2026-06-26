@@ -10,6 +10,8 @@ use crate::ray::Ray;
 use crate::vec3::{Point3, Vec3};
 
 mod ray;
+mod hittable;
+mod sphere;
 
 fn main() {
     println!("Printing image");

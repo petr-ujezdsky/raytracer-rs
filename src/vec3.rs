@@ -1,6 +1,6 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Vec3 {
     pub x: f64,
     pub y: f64,
@@ -18,6 +18,11 @@ impl Add for Vec3 {
 impl Sub for Vec3 {
     type Output = Vec3;
     fn sub(self, o: Vec3) -> Vec3 { Vec3 { x: self.x - o.x, y: self.y - o.y, z: self.z - o.z } }
+}
+
+impl Neg for Vec3 {
+    type Output = Vec3;
+    fn neg(self) -> Vec3 { Vec3 { x: -self.x, y: -self.y, z: -self.z } }
 }
 
 impl Mul<Vec3> for Vec3 {
@@ -104,6 +109,15 @@ mod tests {
         assert_eq!(r.x, 3.0);
         assert_eq!(r.y, 3.0);
         assert_eq!(r.z, 3.0);
+    }
+
+    #[test]
+    fn test_neg() {
+        let a = Vec3 { x: 1.0, y: -2.0, z: 3.0 };
+        let r = -a;
+        assert_eq!(r.x, -1.0);
+        assert_eq!(r.y, 2.0);
+        assert_eq!(r.z, -3.0);
     }
 
     #[test]
