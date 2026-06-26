@@ -61,9 +61,11 @@ impl Div<i32> for Vec3 {
 impl Vec3 {
     pub fn new(x: f64, y: f64, z: f64) -> Vec3 { Vec3 { x, y, z } }
 
-    pub fn length(&self) -> f64 { self.length_squared().sqrt() }
+    pub fn unit_vector(self) -> Vec3 { self / self.length() }
 
-    pub fn length_squared(&self) -> f64 { self.x * self.x + self.y * self.y + self.z * self.z }
+    pub fn length(self) -> f64 { self.length_squared().sqrt() }
+
+    pub fn length_squared(self) -> f64 { self.x * self.x + self.y * self.y + self.z * self.z }
 
     pub fn dot(self, o: Vec3) -> f64 { self.x * o.x + self.y * o.y + self.z * o.z }
 
@@ -75,10 +77,6 @@ impl Vec3 {
         }
     }
 }
-
-pub fn unit_vector(v: Vec3) -> Vec3 { v / v.length() }
-
-pub fn dot(u:Vec3, v: Vec3) -> f64 { u.x * v.x + u.y * v.y + u.z * v.z }
 
 #[cfg(test)]
 mod tests {
@@ -182,14 +180,6 @@ mod tests {
     }
 
     #[test]
-    fn test_dot_2() {
-        let a = Vec3 { x: 1.0, y: 2.0, z: 3.0 };
-        let b = Vec3 { x: 4.0, y: -5.0, z: 6.0 };
-        // 1*4 + 2*(-5) + 3*6 = 4 - 10 + 18 = 12
-        assert_eq!(dot(a, b), 12.0);
-    }
-
-    #[test]
     fn test_cross() {
         // Standard basis: x × y = z
         let x = Vec3 { x: 1.0, y: 0.0, z: 0.0 };
@@ -212,7 +202,7 @@ mod tests {
     #[test]
     fn test_unit_vector() {
         let v = Vec3 { x: 2.0, y: 3.0, z: 6.0 };
-        let u = unit_vector(v);
+        let u = v.unit_vector();
         // length is 7, so the normalized components are (2/7, 3/7, 6/7)
         assert_eq!(u.x, 2.0 / 7.0);
         assert_eq!(u.y, 3.0 / 7.0);
