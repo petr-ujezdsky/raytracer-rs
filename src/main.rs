@@ -28,7 +28,7 @@ fn main() {
     world.add(Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0));
 
     // Camera
-    let camera = Camera::new(16.0 / 9.0, 400);
+    let camera = Camera::new(16.0 / 9.0, 400, 10);
 
     camera.render(&world);
     // write_to_file(256, 256);

@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Vec3 {
@@ -15,9 +15,17 @@ impl Add for Vec3 {
     fn add(self, o: Vec3) -> Vec3 { Vec3 { x: self.x + o.x, y: self.y + o.y, z: self.z + o.z } }
 }
 
+impl AddAssign<Vec3> for Vec3 {
+    fn add_assign(&mut self, rhs: Vec3) { *self = *self + rhs; }
+}
+
 impl Sub for Vec3 {
     type Output = Vec3;
     fn sub(self, o: Vec3) -> Vec3 { Vec3 { x: self.x - o.x, y: self.y - o.y, z: self.z - o.z } }
+}
+
+impl SubAssign<Vec3> for Vec3 {
+    fn sub_assign(&mut self, rhs: Vec3) { *self = *self - rhs; }
 }
 
 impl Neg for Vec3 {
@@ -28,6 +36,14 @@ impl Neg for Vec3 {
 impl Mul<Vec3> for Vec3 {
     type Output = Vec3;
     fn mul(self, o: Vec3) -> Vec3 { Vec3 { x: self.x * o.x, y: self.y * o.y, z: self.z * o.z } }
+}
+
+impl MulAssign<f64> for Vec3 {
+    fn mul_assign(&mut self, rhs: f64) { *self = *self * rhs; }
+}
+
+impl DivAssign<f64> for Vec3 {
+    fn div_assign(&mut self, rhs: f64) { *self = *self / rhs; }
 }
 
 /// Generates scalar `Mul` and `Div` for Vec3 for every listed numeric type,
@@ -68,6 +84,8 @@ impl_scalar_ops!(f64, i32);
 
 
 impl Vec3 {
+    pub fn zero() -> Vec3 { Vec3 { x: 0.0, y: 0.0, z: 0.0 } }
+
     pub fn new(x: f64, y: f64, z: f64) -> Vec3 { Vec3 { x, y, z } }
 
     pub fn unit_vector(self) -> Vec3 { self / self.length() }
@@ -228,5 +246,49 @@ mod tests {
 
         // The length of a unit vector must be 1 (allowing for floating point error)
         assert!((u.length() - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_zero() {
+        let z = Vec3::zero();
+        assert_eq!(z.x, 0.0);
+        assert_eq!(z.y, 0.0);
+        assert_eq!(z.z, 0.0);
+    }
+
+    #[test]
+    fn test_add_assign() {
+        let mut a = Vec3 { x: 1.0, y: 2.0, z: 3.0 };
+        a += Vec3 { x: 4.0, y: 5.0, z: 6.0 };
+        assert_eq!(a.x, 5.0);
+        assert_eq!(a.y, 7.0);
+        assert_eq!(a.z, 9.0);
+    }
+
+    #[test]
+    fn test_sub_assign() {
+        let mut a = Vec3 { x: 4.0, y: 5.0, z: 6.0 };
+        a -= Vec3 { x: 1.0, y: 2.0, z: 3.0 };
+        assert_eq!(a.x, 3.0);
+        assert_eq!(a.y, 3.0);
+        assert_eq!(a.z, 3.0);
+    }
+
+    #[test]
+    fn test_mul_assign() {
+        let mut a = Vec3 { x: 1.0, y: -2.0, z: 3.0 };
+        a *= 2.0;
+        assert_eq!(a.x, 2.0);
+        assert_eq!(a.y, -4.0);
+        assert_eq!(a.z, 6.0);
+    }
+
+    #[test]
+    fn test_div_assign() {
+        let mut a = Vec3 { x: 2.0, y: -4.0, z: 6.0 };
+        a /= 2.0;
+        assert_eq!(a.x, 1.0);
+        assert_eq!(a.y, -2.0);
+        assert_eq!(a.z, 3.0);
     }
 }
