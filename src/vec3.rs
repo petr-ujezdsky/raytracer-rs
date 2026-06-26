@@ -20,36 +20,35 @@ impl Sub for Vec3 {
     fn sub(self, o: Vec3) -> Vec3 { Vec3 { x: self.x - o.x, y: self.y - o.y, z: self.z - o.z } }
 }
 
-impl Mul<f64> for Vec3 {
-    type Output = Vec3;
-    fn mul(self, s: f64) -> Vec3 { Vec3 { x: self.x * s, y: self.y * s, z: self.z * s } }
-}
-
-impl Mul<Vec3> for f64 {
-    type Output = Vec3;
-    fn mul(self, v: Vec3) -> Vec3 { v * self }
-}
-
-impl Mul<Vec3> for i32 {
-    type Output = Vec3;
-    fn mul(self, v: Vec3) -> Vec3 { self as f64 * v }
-}
-
 impl Mul<Vec3> for Vec3 {
     type Output = Vec3;
     fn mul(self, o: Vec3) -> Vec3 { Vec3 { x: self.x * o.x, y: self.y * o.y, z: self.z * o.z } }
 }
 
-impl Div<f64> for Vec3 {
-    type Output = Vec3;
-    fn div(self, s: f64) -> Vec3 { Vec3 { x: self.x / s, y: self.y / s, z: self.z / s } }
-}
+/// Generates scalar `Mul` and `Div` for Vec3 for every listed numeric type,
+/// so you can write `v * 2`, `2 * v`, `v / 2`, `v * 2.0`, ... without manual `as f64`.
+macro_rules! impl_scalar_ops {
+    ($($t:ty),* $(,)?) => {$(
+        impl Mul<$t> for Vec3 {
+            type Output = Vec3;
+            fn mul(self, s: $t) -> Vec3 {
+                let s = s as f64;
+                Vec3 { x: self.x * s, y: self.y * s, z: self.z * s }
+            }
+        }
 
-impl Div<i32> for Vec3 {
-    type Output = Vec3;
-    fn div(self, s: i32) -> Vec3 { self / s as f64 }
-}
+        impl Mul<Vec3> for $t {
+            type Output = Vec3;
+            fn mul(self, v: Vec3) -> Vec3 { v * self }
+        }
 
+        impl Div<$t> for Vec3 {
+            type Output = Vec3;
+            fn div(self, s: $t) -> Vec3 {
+                let s = s as f64;
+                Vec3 { x: self.x / s, y: self.y / s, z: self.z / s }
+            }
+        }
 // impl Div<f64> for Vec3 {
 //     type Output = Vec3;
 //     fn div(self, s: f64) -> Vec3 {
@@ -57,6 +56,11 @@ impl Div<i32> for Vec3 {
 //         Vec3 { x: self.x * inv, y: self.y * inv, z: self.z * inv }
 //     }
 // }
+    )*};
+}
+
+impl_scalar_ops!(f64, i32);
+
 
 impl Vec3 {
     pub fn new(x: f64, y: f64, z: f64) -> Vec3 { Vec3 { x, y, z } }
