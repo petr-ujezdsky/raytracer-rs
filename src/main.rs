@@ -13,6 +13,7 @@ mod ray;
 mod hittable;
 mod sphere;
 mod hittable_list;
+mod utils;
 
 fn main() {
     println!("Printing image");
