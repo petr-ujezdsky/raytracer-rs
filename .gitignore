@@ -21,4 +21,4 @@ target
 #.idea/
 
 # rendered image
-output.ppm
+*.ppm
