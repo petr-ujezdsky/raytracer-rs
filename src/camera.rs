@@ -20,9 +20,6 @@ pub struct CameraConfig {
 
     /// Count of random samples for each pixel
     pub samples_per_pixel: u32,
-
-    /// Random numbers generator
-    pub rng: Random,
 }
 
 impl Default for CameraConfig {
@@ -31,7 +28,6 @@ impl Default for CameraConfig {
             aspect_ratio: 16.0 / 9.0,
             image_width: 400,
             samples_per_pixel: 10,
-            rng: Random::from_os(),
         }
     }
 }
@@ -46,9 +42,6 @@ pub struct Camera {
 
     /// Count of random samples for each pixel
     pub samples_per_pixel: u32,
-
-    /// Random numbers generator
-    pub rng: Random,
 
     /// Rendered image height
     image_height: u32,
@@ -71,7 +64,7 @@ pub struct Camera {
 
 impl Camera {
     pub fn new(config: CameraConfig) -> Camera {
-        let CameraConfig { aspect_ratio, image_width, samples_per_pixel, rng } = config;
+        let CameraConfig { aspect_ratio, image_width, samples_per_pixel } = config;
 
         // Calculate the image height, and ensure that it's at least 1.
         let image_height = max(1, (image_width as f64 / aspect_ratio) as u32);
@@ -102,7 +95,6 @@ impl Camera {
             aspect_ratio,
             image_width,
             samples_per_pixel,
-            rng,
             image_height,
             center: camera_center,
             pixel00_loc,
@@ -112,7 +104,7 @@ impl Camera {
         }
     }
 
-    pub fn render(&mut self, world: &dyn Hittable) {
+    pub fn render(&self, world: &dyn Hittable) {
         // Create (or overwrite) the file and wrap it in a buffer for efficient incremental writing
         let file = File::create("output.ppm").expect("Failed to create file");
         let mut writer = BufWriter::new(file);
@@ -122,6 +114,9 @@ impl Camera {
         writeln!(writer, "{} {}", self.image_width, self.image_height).expect("Failed to write header");
         writeln!(writer, "255").expect("Failed to write header");
 
+        // Initialize random numbers generator
+        let mut rng = Random::from_os();
+
         // Then write data incrementally in a for loop
         for j in 0..self.image_height {
             println!("Scanlines remaining {}", self.image_height - j);
@@ -130,7 +125,7 @@ impl Camera {
                 let mut pixel_color = Color::zero();
 
                 for _sample in 0..self.samples_per_pixel {
-                    let r = self.get_ray(i, j);
+                    let r = self.get_ray(i, j, &mut rng);
                     pixel_color += Camera::ray_color(r, world);
                 }
 
@@ -156,8 +151,8 @@ impl Camera {
 
     /// Construct a camera ray originating from the origin and directed at randomly sampled
     /// point around the pixel location i, j.
-    fn get_ray(&mut self, i: u32, j: u32) -> Ray {
-        let offset = self.sample_square();
+    fn get_ray(&self, i: u32, j: u32, rng: &mut Random) -> Ray {
+        let offset = self.sample_square(rng);
         let pixel_sample = self.pixel00_loc
             + ((i as f64 + offset.x) * self.pixel_delta_u)
             + ((j as f64 + offset.y) * self.pixel_delta_v);
@@ -169,7 +164,7 @@ impl Camera {
     }
 
     /// Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
-    fn sample_square(&mut self) -> Vec3 {
-        Vec3::new(self.rng.f64() - 0.5, self.rng.f64() - 0.5, 0.0)
+    fn sample_square(&self, rng: &mut Random) -> Vec3 {
+        Vec3::new(rng.f64() - 0.5, rng.f64() - 0.5, 0.0)
     }
 }

@@ -28,7 +28,7 @@ fn main() {
     world.add(Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0));
 
     // Camera
-    let mut camera = Camera::new(CameraConfig {
+    let camera = Camera::new(CameraConfig {
         image_width: 400,
         samples_per_pixel: 100,
         ..Default::default()
