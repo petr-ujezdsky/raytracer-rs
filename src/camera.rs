@@ -153,7 +153,7 @@ impl Camera {
         }
 
         // Try to hit something in the world
-        if let Some(rec) = world.hit(r, Interval::new(0.0, utils::INFINITY)) {
+        if let Some(rec) = world.hit(r, Interval::new(0.001, utils::INFINITY)) {
             let direction = Vec3::random_on_hemisphere(rng, rec.normal);
             return 0.5 * Self::ray_color(Ray::new(rec.p, direction), depth - 1, world, rng);
         }
