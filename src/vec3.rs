@@ -1,4 +1,5 @@
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Range, Sub, SubAssign};
+use crate::random::Random;
 
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Vec3 {
@@ -87,6 +88,40 @@ impl Vec3 {
     pub fn zero() -> Vec3 { Vec3 { x: 0.0, y: 0.0, z: 0.0 } }
 
     pub fn new(x: f64, y: f64, z: f64) -> Vec3 { Vec3 { x, y, z } }
+
+    pub fn random(rng: &mut Random) -> Vec3 {
+        Vec3 {
+            x: rng.f64(),
+            y: rng.f64(),
+            z: rng.f64(),
+        }
+    }
+
+    pub fn random_range(rng: &mut Random, range: Range<f64>) -> Vec3 {
+        Vec3 {
+            x: rng.range_f64(range.clone()),
+            y: rng.range_f64(range.clone()),
+            z: rng.range_f64(range),
+        }
+    }
+
+    pub fn random_unit_vector(rng: &mut Random) -> Vec3 {
+        loop {
+            let p = Vec3::random_range(rng, -1.0..1.0);
+            let lensq = p.length_squared();
+
+            if 1e-160 < lensq && lensq <= 1.0 {
+                return p / lensq.sqrt();
+            }
+        }
+    }
+
+    pub fn random_on_hemisphere(rng: &mut Random, normal: Vec3) -> Vec3 {
+        let on_unit_sphere = Vec3::random_unit_vector(rng);
+
+        // In the same hemisphere as the normal
+        if on_unit_sphere.dot(normal) > 0.0 { on_unit_sphere } else { -on_unit_sphere }
+    }
 
     pub fn unit_vector(self) -> Vec3 { self / self.length() }
 

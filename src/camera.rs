@@ -126,7 +126,7 @@ impl Camera {
 
                 for _sample in 0..self.samples_per_pixel {
                     let r = self.get_ray(i, j, &mut rng);
-                    pixel_color += Camera::ray_color(r, world);
+                    pixel_color += Self::ray_color(r, world, &mut rng);
                 }
 
                 write_color(&mut writer, self.pixel_samples_scale * pixel_color);
@@ -138,9 +138,10 @@ impl Camera {
         println!("Done");
     }
 
-    fn ray_color(r: Ray, world: &dyn Hittable) -> Color {
+    fn ray_color(r: Ray, world: &dyn Hittable, rng: &mut Random) -> Color {
         if let Some(rec) = world.hit(r, Interval::new(0.0, utils::INFINITY)) {
-            return 0.5 * (rec.normal + Color::new(1.0, 1.0, 1.0));
+            let direction = Vec3::random_on_hemisphere(rng, rec.normal);
+            return 0.5 * Self::ray_color(Ray::new(rec.p, direction), world, rng);
         }
 
         // no hit -> background
