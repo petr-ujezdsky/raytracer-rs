@@ -4,8 +4,7 @@ use std::io::{BufWriter, Write};
 mod vec3;
 
 mod color;
-use crate::camera::Camera;
-use crate::hittable::Hittable;
+use crate::camera::{Camera, CameraConfig};
 use crate::hittable_list::HittableList;
 use crate::sphere::Sphere;
 use crate::vec3::Point3;
@@ -28,7 +27,11 @@ fn main() {
     world.add(Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0));
 
     // Camera
-    let camera = Camera::new(16.0 / 9.0, 400, 10);
+    let camera = Camera::new(CameraConfig {
+        image_width: 400,
+        samples_per_pixel: 100,
+        ..Default::default()
+    });
 
     camera.render(&world);
     // write_to_file(256, 256);
