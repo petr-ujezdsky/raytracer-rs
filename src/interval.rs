@@ -31,6 +31,15 @@ impl Interval {
     pub fn surrounds(self, x: f64) -> bool {
         self.min < x && x < self.max
     }
+
+    /// Clamps `x` to the interval: returns `min` if `x < min`, `max` if `x > max`,
+    /// otherwise `x` unchanged.
+    pub fn clamp(self, x: f64) -> f64 {
+        x.clamp(self.min, self.max)
+
+        // or not panic variant for NaN etc
+        // x.max(self.min).min(self.max)
+    }
 }
 
 /// The empty interval: contains no points.
@@ -83,5 +92,19 @@ mod tests {
         // outside
         assert!(!i.surrounds(0.0));
         assert!(!i.surrounds(5.0));
+    }
+
+    #[test]
+    fn test_clamp() {
+        let i = Interval::new(1.0, 4.0);
+        // inside the interval -> unchanged
+        assert_eq!(i.clamp(2.0), 2.0);
+        // below min -> clamped to min
+        assert_eq!(i.clamp(-5.0), 1.0);
+        // above max -> clamped to max
+        assert_eq!(i.clamp(10.0), 4.0);
+        // exactly on the boundaries -> unchanged
+        assert_eq!(i.clamp(1.0), 1.0);
+        assert_eq!(i.clamp(4.0), 4.0);
     }
 }

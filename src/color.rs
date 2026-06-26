@@ -1,5 +1,5 @@
 use std::io::Write;
-
+use crate::interval::Interval;
 use crate::vec3::Vec3;
 
 /// Type alias for Vec3 used to represent an RGB color.
@@ -8,11 +8,15 @@ pub type Color = Vec3;
 
 /// Writes a single color to the given buffer in PPM format (three integers 0-255).
 pub fn write_color<W: Write>(writer: &mut W, pixel_color: Color) {
-    // Translate the [0,1] component values to the byte range [0,255]
-    let ir = (255.999 * pixel_color.x) as u32;
-    let ig = (255.999 * pixel_color.y) as u32;
-    let ib = (255.999 * pixel_color.z) as u32;
+    let r = pixel_color.x;
+    let g = pixel_color.y;
+    let b = pixel_color.z;
 
-    writeln!(writer, "{} {} {}", ir, ig, ib).expect("Failed to write color");
+    // Translate the [0,1] component values to the byte range [0,255].
+    const INTENSITY: Interval = Interval::new(0.0, 0.999);
+    let rbyte = (256.0 * INTENSITY.clamp(r)) as u32;
+    let gbyte = (256.0 * INTENSITY.clamp(g)) as u32;
+    let bbyte = (256.0 * INTENSITY.clamp(b)) as u32;
+
+    writeln!(writer, "{} {} {}", rbyte, gbyte, bbyte).expect("Failed to write color");
 }
-
