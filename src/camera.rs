@@ -125,6 +125,8 @@ impl Camera {
         // Initialize random numbers generator
         let mut rng = Random::from_os();
 
+        let image_width_half = self.image_width / 2;
+
         // Then write data incrementally in a for loop
         for j in 0..self.image_height {
             println!("Scanlines remaining {}", self.image_height - j);
@@ -134,7 +136,8 @@ impl Camera {
 
                 for _sample in 0..self.samples_per_pixel {
                     let r = self.get_ray(i, j, &mut rng);
-                    pixel_color += Self::ray_color(r, self.max_depth, world, &mut rng);
+                    let left_half = i < image_width_half;
+                    pixel_color += Self::ray_color(r, self.max_depth, world, &mut rng, left_half);
                 }
 
                 write_color(&mut writer, self.pixel_samples_scale * pixel_color);
@@ -146,7 +149,7 @@ impl Camera {
         println!("Done");
     }
 
-    fn ray_color(r: Ray, depth: u32, world: &dyn Hittable, rng: &mut Random) -> Color {
+    fn ray_color(r: Ray, depth: u32, world: &dyn Hittable, rng: &mut Random, left_half: bool) -> Color {
         // If we've exceeded the ray bounce limit, no more light is gathered.
         if depth <= 0 {
             return Color::zero();
@@ -154,8 +157,9 @@ impl Camera {
 
         // Try to hit something in the world
         if let Some(rec) = world.hit(r, Interval::new(0.001, utils::INFINITY)) {
-            let direction = Vec3::random_on_hemisphere(rng, rec.normal);
-            return 0.5 * Self::ray_color(Ray::new(rec.p, direction), depth - 1, world, rng);
+            // left is newer and better
+            let direction = if left_half { rec.normal + Vec3::random_unit_vector(rng) } else { Vec3::random_on_hemisphere(rng, rec.normal) };
+            return 0.5 * Self::ray_color(Ray::new(rec.p, direction), depth - 1, world, rng, left_half);
         }
 
         // No hit -> background
