@@ -22,12 +22,12 @@ impl HittableList {
 
 impl Hittable for HittableList {
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
-        let mut closest_so_far = ray_t.max;
+        let mut search_range_t = ray_t;
         let mut result = None;
 
         for object in self.objects.iter() {
-            if let Some(rec) = object.hit(r, Interval::new(ray_t.min, closest_so_far)) {
-                closest_so_far = rec.t;
+            if let Some(rec) = object.hit(r, search_range_t) {
+                search_range_t = Interval::new(ray_t.min, rec.t);
                 result = Some(rec);
             }
         }
