@@ -8,12 +8,6 @@ pub struct Interval {
 }
 
 impl Interval {
-    /// Creates an empty interval (contains no points).
-    ///
-    /// `min` is `+∞` and `max` is `-∞`, so [`contains`](Interval::contains)
-    /// and [`surrounds`](Interval::surrounds) always return `false`.
-    pub const fn empty() -> Interval { Interval { min: INFINITY, max: -INFINITY } }
-
     /// Creates an interval with the given `min` and `max` bounds.
     pub const fn new(min: f64, max: f64) -> Interval { Interval { min, max } }
 
@@ -43,9 +37,15 @@ impl Interval {
 }
 
 /// The empty interval: contains no points.
-pub const EMPTY: Interval = Interval::empty();
+///
+/// `min` is `+∞` and `max` is `-∞`, so [`contains`](Interval::contains)
+/// and [`surrounds`](Interval::surrounds) always return `false`.
+pub const EMPTY: Interval = Interval::new(INFINITY, -INFINITY);
 
 /// The universe interval: contains every real number.
+///
+/// `min` is `-∞` and `max` is `+∞`, so [`contains`](Interval::contains)
+/// and [`surrounds`](Interval::surrounds) always return `true`.
 pub const UNIVERSE: Interval = Interval::new(-INFINITY, INFINITY);
 
 #[cfg(test)]
@@ -54,12 +54,24 @@ mod tests {
 
     #[test]
     fn test_empty() {
-        let i = Interval::empty();
+        let i = EMPTY;
         // An empty interval contains nothing.
         assert!(!i.contains(0.0));
         assert!(!i.surrounds(0.0));
         // size is negative (max < min)
         assert!(i.size() < 0.0);
+    }
+
+    #[test]
+    fn test_universe() {
+        let i = UNIVERSE;
+        // The universe contains every real number.
+        assert!(i.contains(0.0));
+        assert!(i.contains(1e300));
+        assert!(i.contains(-1e300));
+        assert!(i.surrounds(0.0));
+        // size is positive infinity
+        assert_eq!(i.size(), INFINITY);
     }
 
     #[test]
