@@ -31,6 +31,7 @@ fn main() {
     let camera = Camera::new(CameraConfig {
         image_width: 400,
         samples_per_pixel: 100,
+        max_depth: 50,
         ..Default::default()
     });
 
