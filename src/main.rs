@@ -12,6 +12,7 @@ use crate::vec3::{Point3, Vec3};
 mod ray;
 mod hittable;
 mod sphere;
+mod hittable_list;
 
 fn main() {
     println!("Printing image");
