@@ -1,13 +1,16 @@
+use std::sync::Arc;
 use crate::hittable::{HitRecord, Hittable};
 use crate::interval::Interval;
+use crate::material::Material;
 use crate::ray::Ray;
 use crate::vec3::Point3;
 
 /// Records information about a ray-object intersection.
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone)]
 pub struct Sphere {
     pub center: Point3,
     pub radius: f64,
+    pub mat_ptr: Arc<dyn Material>,
 }
 
 impl Hittable for Sphere {
@@ -39,15 +42,15 @@ impl Hittable for Sphere {
         let p = r.at(root);
         let outward_normal = (p - self.center) / self.radius;
 
-        let rec = HitRecord::new(p, outward_normal, root, r);
+        let rec = HitRecord::new(p, outward_normal, root, r, self.mat_ptr.clone());
 
         Some(rec)
     }
 }
 
 impl Sphere {
-    pub fn new(center: Point3, radius: f64) -> Sphere {
+    pub fn new(center: Point3, radius: f64, mat_ptr: Arc<dyn Material>) -> Sphere {
         // make sure the radius is >= 0
-        Sphere { center,  radius: f64::max(0.0, radius) }
+        Sphere { center, radius: f64::max(0.0, radius), mat_ptr }
     }
 }

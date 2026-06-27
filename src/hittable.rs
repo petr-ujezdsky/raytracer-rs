@@ -1,24 +1,27 @@
+use std::sync::Arc;
 use crate::interval::Interval;
+use crate::material::Material;
 use crate::ray::Ray;
 use crate::vec3::{Point3, Vec3};
 
 /// Records information about a ray-object intersection.
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Clone)]
 pub struct HitRecord {
     pub p: Point3,
     pub normal: Vec3,
+    pub mat_ptr: Arc<dyn Material>,
     pub t: f64,
     pub front_face: bool,
 }
 
 impl HitRecord {
-    pub fn new(p: Point3, outward_normal: Vec3, t: f64, r: Ray) -> HitRecord {
+    pub fn new(p: Point3, outward_normal: Vec3, t: f64, r: Ray, mat_ptr: Arc<dyn Material>) -> HitRecord {
         // make sure the normal is always facing against the ray
         // NOTE: the parameter `normal` is assumed to have unit length.
         let front_face = front_face(r, outward_normal);
         let normal = if front_face { outward_normal } else { -outward_normal };
 
-        HitRecord { p, normal, t, front_face }
+        HitRecord { p, normal, mat_ptr, t, front_face }
     }
 }
 
