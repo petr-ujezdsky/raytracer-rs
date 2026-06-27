@@ -10,7 +10,7 @@ use crate::hittable_list::HittableList;
 use crate::sphere::Sphere;
 use crate::vec3::Point3;
 use color::{write_color, Color};
-use crate::material::{Lambertian, Metal};
+use crate::material::{Dielectric, Lambertian, Metal};
 
 mod ray;
 mod hittable;
@@ -28,7 +28,8 @@ fn main() {
     // Materials
     let material_ground = Arc::new(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
     let material_center = Arc::new(Lambertian::new(Color::new(0.1, 0.2, 0.5)));
-    let material_left   = Arc::new(Metal::new(Color::new(0.8, 0.8, 0.8), 0.3));
+    // let material_left   = Arc::new(Metal::new(Color::new(0.8, 0.8, 0.8), 0.3));
+    let material_left   = Arc::new(Dielectric::new(1.5));
     let material_right  = Arc::new(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0));
 
     // World
