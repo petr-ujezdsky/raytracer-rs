@@ -8,7 +8,7 @@ mod color;
 use crate::camera::{Camera, CameraConfig};
 use crate::hittable_list::HittableList;
 use crate::sphere::Sphere;
-use crate::vec3::Point3;
+use crate::vec3::{Point3, Vec3};
 use color::{write_color, Color};
 use crate::material::{Dielectric, Lambertian, Metal};
 
@@ -45,6 +45,10 @@ fn main() {
         image_width: 400,
         samples_per_pixel: 100,
         max_depth: 50,
+        vfov: 20,
+        lookfrom: Point3::new(-2.0, 2.0, 1.0),
+        lookat: Point3::new(0.0, 0.0, -1.0),
+        vup: Vec3::new(0.0, 1.0, 0.0),
         ..Default::default()
     });
 
