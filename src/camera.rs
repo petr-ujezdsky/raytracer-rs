@@ -9,6 +9,7 @@ use std::cmp::max;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::time::Instant;
 use rayon::iter::IntoParallelIterator;
 use crate::random::Random;
 
@@ -197,6 +198,9 @@ impl Camera {
     }
 
     pub fn render(&self, world: &dyn Hittable) {
+        // Start measuring the total render time.
+        let start = Instant::now();
+
         // Create (or overwrite) the file and wrap it in a buffer for efficient incremental writing
         let file = File::create("output.ppm").expect("Failed to create file");
         let mut writer = BufWriter::new(file);
@@ -248,7 +252,9 @@ impl Camera {
 
         // Flush the buffer to make sure everything is actually written to disk
         writer.flush().expect("Failed to flush buffer");
-        println!("Done");
+
+        // log elapsed time - "?" (debug) is in dynamic units (1.23s, 350.00ms, 12.50µs)
+        println!("Done in {:.2?}", start.elapsed());
     }
 
     fn ray_color(r: Ray, depth: u32, world: &dyn Hittable, rng: &mut Random, left_half: bool) -> Color {
