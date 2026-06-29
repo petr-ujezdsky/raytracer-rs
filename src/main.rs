@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::sync::Arc;
 
 mod vec3;
@@ -30,6 +29,7 @@ fn main() {
     many_spheres();
 }
 
+#[allow(dead_code)]
 fn three_spheres() {
     // Materials
     let material_ground = Arc::new(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
@@ -76,15 +76,15 @@ fn many_spheres() {
             let choose_mat = rng.f64();
             let center = Point3::new(a as f64 + 0.9*rng.f64(), 0.2, b as f64 + 0.9*rng.f64());
 
-            if ((center - Point3::new(4.0, 0.2, 0.0)).length() > 0.9) {
+            if (center - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 let sphere_material: Arc<dyn Material>;
 
-                if (choose_mat < 0.8) {
+                if choose_mat < 0.8 {
                     // diffuse
                     let albedo = Color::random(&mut rng) * Color::random(&mut rng);
                     sphere_material = Arc::new(Lambertian::new(albedo));
                     world.add(Sphere::new(center, 0.2, sphere_material));
-                } else if (choose_mat < 0.95) {
+                } else if choose_mat < 0.95 {
                     // metal
                     let albedo = Color::random_range(&mut rng, 0.5..1.0);
                     let fuzz = rng.range_f64(0.0..0.5);
