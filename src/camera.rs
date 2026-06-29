@@ -8,6 +8,7 @@ use crate::vec3::{Point3, Vec3};
 use std::cmp::max;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use std::sync::atomic::{AtomicU32, Ordering};
 use rayon::iter::IntoParallelIterator;
 use crate::random::Random;
 
@@ -207,23 +208,36 @@ impl Camera {
 
         let image_width_half = self.image_width / 2;
 
+        // Track how many scanlines are already finished. Rows complete out of order
+        // across threads, so the counter must be atomic.
+        let scanlines_done = AtomicU32::new(0);
+        let total = self.image_height;
+
         let pixels: Vec<Color> = (0..self.image_height)
             .into_par_iter()
             .flat_map(|j| {
                 // Initialize random numbers generator *per thread*
                 let mut rng = Random::from_os();
 
-                (0..self.image_width).map(move |i| {
+                let row: Vec<Color> = (0..self.image_width).map(|i| {
                     let mut pixel_color = Color::zero();
 
                     for _sample in 0..self.samples_per_pixel {
                         let r = self.get_ray(i, j, &mut rng);
                         let left_half = i < image_width_half;
+                        // trace the ray and accumulate color
                         pixel_color += Self::ray_color(r, self.max_depth, world, &mut rng, left_half);
                     }
 
                     self.pixel_samples_scale * pixel_color
-                }).collect::<Vec<_>>()
+                }).collect();
+
+                // Row finished: bump the counter and log remaining work.
+                // fetch_add returns the value *before* incrementing, so add 1.
+                let done = scanlines_done.fetch_add(1, Ordering::Relaxed) + 1;
+                eprintln!("Scanline #{:03} done, remaining: {}", j, total - done);
+
+                row
             })
             .collect();
 
