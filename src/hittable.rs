@@ -26,7 +26,7 @@ impl HitRecord {
 }
 
 /// Anything a ray can intersect with.
-pub trait Hittable {
+pub trait Hittable: Send + Sync {
     /// Returns `Some(HitRecord)` if the ray `r` hits the object within given `ray_t` interval,
     /// otherwise returns `None`.
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord>;

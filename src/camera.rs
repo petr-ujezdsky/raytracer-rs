@@ -1,3 +1,4 @@
+use rayon::iter::ParallelIterator;
 use crate::color::{write_color, Color};
 use crate::hittable::Hittable;
 use crate::interval::Interval;
@@ -7,6 +8,7 @@ use crate::vec3::{Point3, Vec3};
 use std::cmp::max;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use rayon::iter::IntoParallelIterator;
 use crate::random::Random;
 
 /// Config struct for [`Camera`](Camera) that enables usage of default parameters
@@ -203,26 +205,31 @@ impl Camera {
         writeln!(writer, "{} {}", self.image_width, self.image_height).expect("Failed to write header");
         writeln!(writer, "255").expect("Failed to write header");
 
-        // Initialize random numbers generator
-        let mut rng = Random::from_os();
-
         let image_width_half = self.image_width / 2;
 
+        let pixels: Vec<Color> = (0..self.image_height)
+            .into_par_iter()
+            .flat_map(|j| {
+                // Initialize random numbers generator *per thread*
+                let mut rng = Random::from_os();
+
+                (0..self.image_width).map(move |i| {
+                    let mut pixel_color = Color::zero();
+
+                    for _sample in 0..self.samples_per_pixel {
+                        let r = self.get_ray(i, j, &mut rng);
+                        let left_half = i < image_width_half;
+                        pixel_color += Self::ray_color(r, self.max_depth, world, &mut rng, left_half);
+                    }
+
+                    self.pixel_samples_scale * pixel_color
+                }).collect::<Vec<_>>()
+            })
+            .collect();
+
         // Then write data incrementally in a for loop
-        for j in 0..self.image_height {
-            println!("Scanlines remaining {}", self.image_height - j);
-
-            for i in 0..self.image_width {
-                let mut pixel_color = Color::zero();
-
-                for _sample in 0..self.samples_per_pixel {
-                    let r = self.get_ray(i, j, &mut rng);
-                    let left_half = i < image_width_half;
-                    pixel_color += Self::ray_color(r, self.max_depth, world, &mut rng, left_half);
-                }
-
-                write_color(&mut writer, self.pixel_samples_scale * pixel_color);
-            }
+        for color in &pixels {
+            write_color(&mut writer, *color);
         }
 
         // Flush the buffer to make sure everything is actually written to disk

@@ -10,7 +10,7 @@ pub struct ScatterRecord {
 }
 
 /// Surface material.
-pub trait Material {
+pub trait Material: Send + Sync {
     fn scatter(&self, r_in: Ray, rec: &HitRecord, rng: &mut Random) -> Option<ScatterRecord>;
 }
 
