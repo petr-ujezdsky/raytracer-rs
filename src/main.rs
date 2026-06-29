@@ -49,6 +49,8 @@ fn main() {
         lookfrom: Point3::new(-2.0, 2.0, 1.0),
         lookat: Point3::new(0.0, 0.0, -1.0),
         vup: Vec3::new(0.0, 1.0, 0.0),
+        defocus_angle: 10.0,
+        focus_dist: 3.4,
         ..Default::default()
     });
 
