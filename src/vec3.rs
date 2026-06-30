@@ -71,13 +71,14 @@ macro_rules! impl_scalar_ops {
                 Vec3 { x: self.x / s, y: self.y / s, z: self.z / s }
             }
         }
-// impl Div<f64> for Vec3 {
-//     type Output = Vec3;
-//     fn div(self, s: f64) -> Vec3 {
-//         let inv = 1.0 / s;
-//         Vec3 { x: self.x * inv, y: self.y * inv, z: self.z * inv }
-//     }
-// }
+
+        // impl Div<$t> for Vec3 {
+        //     type Output = Vec3;
+        //     fn div(self, s: $t) -> Vec3 {
+        //         let inv = 1.0 / s as f64;
+        //         Vec3 { x: self.x * inv, y: self.y * inv, z: self.z * inv }
+        //     }
+        // }
     )*};
 }
 

@@ -64,9 +64,13 @@ fn three_spheres() {
 }
 
 fn many_spheres() {
+    // Rng
+    let rng_seed: Option<u64> = None;
+    // let rng_seed = Some(12487324);
+    let mut rng = Random::from_os_or_seeded(rng_seed);
+
     // World
     let mut world = HittableList::default();
-    let mut rng = Random::from_os();
 
     let ground_material = Arc::new(Lambertian::new(Color::new(0.5, 0.5, 0.5)));
     world.add(Sphere::new(Point3::new(0.0,-1000.0,0.0), 1000.0, ground_material));

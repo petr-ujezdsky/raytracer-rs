@@ -20,6 +20,15 @@ impl Random {
     pub fn from_os() -> Self {
         Random::new(rand::rng().random())
     }
+
+    /// nondeterministic (OS entropy) or seeded
+    pub fn from_os_or_seeded(seed: Option<u64>) -> Self {
+        match seed {
+            Some(s) => Random::new(s),
+            None => Random::from_os(),
+        }
+    }
+
     /// Returns a random real in `[0, 1)`.
     pub fn f64(&mut self) -> f64 {
         self.rng.random()

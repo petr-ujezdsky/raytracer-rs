@@ -46,6 +46,9 @@ pub struct CameraConfig {
     /// Distance from camera lookfrom point to plane of perfect focus
     pub focus_dist: f64,
 
+    /// Optional seed for rng
+    pub rng_seed: Option<u64>,
+
 }
 
 impl Default for CameraConfig {
@@ -61,6 +64,7 @@ impl Default for CameraConfig {
             vup: Vec3::new(0.0, 1.0, 0.0),
             defocus_angle: 0.0,
             focus_dist: 10.0,
+            rng_seed: None,
         }
     }
 }
@@ -96,6 +100,9 @@ pub struct Camera {
 
     /// Distance from camera lookfrom point to plane of perfect focus
     pub focus_dist: f64,
+
+    /// Optional seed for rng
+    pub rng_seed: Option<u64>,
 
     /// Rendered image height
     image_height: u32,
@@ -133,7 +140,7 @@ pub struct Camera {
 
 impl Camera {
     pub fn new(config: CameraConfig) -> Camera {
-        let CameraConfig { aspect_ratio, image_width, samples_per_pixel, max_depth, vfov, lookfrom, lookat, vup, defocus_angle, focus_dist } = config;
+        let CameraConfig { aspect_ratio, image_width, samples_per_pixel, max_depth, vfov, lookfrom, lookat, vup, defocus_angle, focus_dist, rng_seed } = config;
 
         // Calculate the image height, and ensure that it's at least 1.
         let image_height = max(1, (image_width as f64 / aspect_ratio) as u32);
@@ -183,6 +190,7 @@ impl Camera {
             vup,
             defocus_angle,
             focus_dist,
+            rng_seed,
             image_height,
             center,
             pixel00_loc,
@@ -221,7 +229,10 @@ impl Camera {
             .into_par_iter()
             .flat_map(|j| {
                 // Initialize random numbers generator *per thread*
-                let mut rng = Random::from_os();
+                let mut rng = match self.rng_seed {
+                    Some(s) => Random::new(j as u64 * s),
+                    None => Random::from_os(),
+                };
 
                 let row: Vec<Color> = (0..self.image_width).map(|i| {
                     let mut pixel_color = Color::zero();
