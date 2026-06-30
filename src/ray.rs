@@ -4,10 +4,11 @@ use crate::vec3::{Point3, Vec3};
 pub struct Ray {
     pub origin: Point3,
     pub direction: Vec3,
+    pub time: f64,
 }
 
 impl Ray {
-    pub fn new(origin: Point3, direction: Vec3) -> Ray { Ray { origin, direction } }
+    pub fn new(origin: Point3, direction: Vec3, time: f64) -> Ray { Ray { origin, direction, time } }
 
     pub fn at(&self, t: f64) -> Vec3 { self.origin + t * self.direction }
 }
@@ -21,6 +22,7 @@ mod tests {
         let ray = Ray {
             origin: Point3 { x: 1.0, y: 2.0, z: 3.0 },
             direction: Vec3 { x: 4.0, y: 5.0, z: 6.0 },
+            time: 0.0,
         };
 
         // at(0) returns the origin

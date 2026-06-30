@@ -66,7 +66,7 @@ fn three_spheres() {
 fn many_spheres() {
     // Rng
     let rng_seed: Option<u64> = None;
-    // let rng_seed = Some(12487324);
+    let rng_seed = Some(12487324);
     let mut rng = Random::from_os_or_seeded(rng_seed);
 
     // World
@@ -87,7 +87,8 @@ fn many_spheres() {
                     // diffuse
                     let albedo = Color::random(&mut rng) * Color::random(&mut rng);
                     sphere_material = Arc::new(Lambertian::new(albedo));
-                    world.add(Sphere::new(center, 0.2, sphere_material));
+                    let center2 = center + Vec3::new(0.0, rng.range_f64(0.0..0.5), 0.0);
+                    world.add(Sphere::new_moving(center, center2, 0.2, sphere_material));
                 } else if choose_mat < 0.95 {
                     // metal
                     let albedo = Color::random_range(&mut rng, 0.5..1.0);
@@ -115,7 +116,7 @@ fn many_spheres() {
     // Camera
     let camera = Camera::new(CameraConfig {
         image_width: 1200,
-        samples_per_pixel: 10,
+        samples_per_pixel: 100,
         max_depth: 50,
 
         vfov: 20,
