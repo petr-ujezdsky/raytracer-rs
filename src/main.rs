@@ -20,6 +20,7 @@ mod interval;
 mod camera;
 mod random;
 mod material;
+mod aabb;
 
 fn main() {
     // scene version throughout the book

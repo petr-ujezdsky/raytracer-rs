@@ -34,6 +34,16 @@ impl Interval {
         // or not panic variant for NaN etc
         // x.max(self.min).min(self.max)
     }
+
+    /// Returns interval expanded by `delta / 2` on each end
+    pub fn expand(self, delta: f64) -> Interval {
+        let padding = delta / 2.0;
+
+        Interval {
+            min: self.min - padding,
+            max: self.max + padding,
+        }
+    }
 }
 
 /// The empty interval: contains no points.
@@ -118,5 +128,53 @@ mod tests {
         // exactly on the boundaries -> unchanged
         assert_eq!(i.clamp(1.0), 1.0);
         assert_eq!(i.clamp(4.0), 4.0);
+    }
+
+    #[test]
+    fn test_expand() {
+        let i = Interval::new(1.0, 4.0);
+        // expand by 2.0 on each end (delta/2 = 1.0)
+        let expanded = i.expand(2.0);
+        assert_eq!(expanded.min, 0.0);
+        assert_eq!(expanded.max, 5.0);
+        assert_eq!(expanded.size(), 5.0);
+    }
+
+    #[test]
+    fn test_expand_zero_delta() {
+        let i = Interval::new(1.0, 4.0);
+        // expand with zero delta should keep the same interval
+        let expanded = i.expand(0.0);
+        assert_eq!(expanded.min, i.min);
+        assert_eq!(expanded.max, i.max);
+        assert_eq!(expanded.size(), i.size());
+    }
+
+    #[test]
+    fn test_expand_negative_delta() {
+        let i = Interval::new(1.0, 4.0);
+        // negative delta contracts the interval
+        let contracted = i.expand(-2.0);
+        assert_eq!(contracted.min, 2.0);
+        assert_eq!(contracted.max, 3.0);
+        assert_eq!(contracted.size(), 1.0);
+    }
+
+    #[test]
+    fn test_expand_empty() {
+        let i = EMPTY;
+        let expanded = i.expand(10.0);
+        // expanding empty interval: min = +∞ - 5 = +∞, max = -∞ + 5 = -∞
+        // still empty
+        assert!(expanded.size() < 0.0);
+    }
+
+    #[test]
+    fn test_expand_universe() {
+        let i = UNIVERSE;
+        let expanded = i.expand(10.0);
+        // expanding infinite interval
+        assert_eq!(expanded.min, -INFINITY);
+        assert_eq!(expanded.max, INFINITY);
     }
 }

@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Range, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Range, Sub, SubAssign};
 use crate::random::Random;
 
 #[derive(Debug, Copy, Clone, Default)]
@@ -45,6 +45,38 @@ impl MulAssign<f64> for Vec3 {
 
 impl DivAssign<f64> for Vec3 {
     fn div_assign(&mut self, rhs: f64) { *self = *self / rhs; }
+}
+
+impl Index<usize> for Vec3 {
+    type Output = f64;
+
+    /// Indexes into the vector: `0` → `x`, `1` → `y`, `2` → `z`.
+    ///
+    /// # Panics
+    /// Panics if `index` is out of bounds (i.e. not `0`, `1`, or `2`).
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => panic!("Vec3 index out of bounds: {index}"),
+        }
+    }
+}
+
+impl IndexMut<usize> for Vec3 {
+    /// Mutably indexes into the vector: `0` → `x`, `1` → `y`, `2` → `z`.
+    ///
+    /// # Panics
+    /// Panics if `index` is out of bounds (i.e. not `0`, `1`, or `2`).
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            _ => panic!("Vec3 index out of bounds: {index}"),
+        }
+    }
 }
 
 /// Generates scalar `Mul` and `Div` for Vec3 for every listed numeric type,
@@ -353,5 +385,38 @@ mod tests {
         assert_eq!(a.x, 1.0);
         assert_eq!(a.y, -2.0);
         assert_eq!(a.z, 3.0);
+    }
+
+    #[test]
+    fn test_index() {
+        let v = Vec3 { x: 1.0, y: 2.0, z: 3.0 };
+        assert_eq!(v[0], 1.0);
+        assert_eq!(v[1], 2.0);
+        assert_eq!(v[2], 3.0);
+    }
+
+    #[test]
+    fn test_index_mut() {
+        let mut v = Vec3 { x: 1.0, y: 2.0, z: 3.0 };
+        v[0] = 10.0;
+        v[1] = 20.0;
+        v[2] = 30.0;
+        assert_eq!(v.x, 10.0);
+        assert_eq!(v.y, 20.0);
+        assert_eq!(v.z, 30.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Vec3 index out of bounds")]
+    fn test_index_out_of_bounds() {
+        let v = Vec3 { x: 1.0, y: 2.0, z: 3.0 };
+        let _ = v[3];
+    }
+
+    #[test]
+    #[should_panic(expected = "Vec3 index out of bounds")]
+    fn test_index_mut_out_of_bounds() {
+        let mut v = Vec3 { x: 1.0, y: 2.0, z: 3.0 };
+        v[3] = 0.0;
     }
 }
