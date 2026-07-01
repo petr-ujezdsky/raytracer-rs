@@ -46,9 +46,21 @@ impl Aabb {
         }
     }
 
-    pub fn hit(&self, r: Ray, ray_t: &mut Interval) -> bool {
+    /// Returns the index of the longest axis of the bounding box.
+    pub fn longest_axis(&self) -> usize {
+        if self.x.size() > self.y.size() {
+            return if self.x.size() > self.z.size() { 0 } else { 2 };
+        };
+
+        if self.y.size() > self.z.size() { 1 } else { 2 }
+    }
+
+    /// Quick function to detect hit against ray.
+    /// Distinct from the [`Hittable`](crate::hittable::Hittable) interface due to a different signature.
+    pub fn hit(&self, r: Ray, ray_t: Interval) -> bool {
         let ray_orig = r.origin;
         let ray_dir = r.direction;
+        let mut ray_t = ray_t;
 
         for axis in 0..3 {
             let ax = self.axis_interval(axis);

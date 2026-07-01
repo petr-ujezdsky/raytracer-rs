@@ -1,6 +1,7 @@
 use std::ops::Range;
 use rand::rngs::SmallRng;
 use rand::{RngExt, SeedableRng};
+use rand::distr::uniform::{SampleRange, SampleUniform};
 
 /// Wrapper to decouple random implementation from the rest of the codebase
 #[derive(Debug)]
@@ -36,6 +37,15 @@ impl Random {
 
     /// Returns a random real in given range.
     pub fn range_f64(&mut self, range: Range<f64>) -> f64 {
+        self.rng.random_range(range)
+    }
+
+    /// Returns a random usize in given range.
+    pub fn range<T, R>(&mut self, range: R) -> T
+    where
+        T: SampleUniform,
+        R: SampleRange<T>
+    {
         self.rng.random_range(range)
     }
 

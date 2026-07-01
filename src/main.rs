@@ -10,6 +10,7 @@ use crate::random::Random;
 use crate::sphere::Sphere;
 use crate::vec3::{Point3, Vec3};
 use color::Color;
+use crate::bvh_node::BvhNode;
 
 mod ray;
 mod hittable;
@@ -21,6 +22,7 @@ mod camera;
 mod random;
 mod material;
 mod aabb;
+mod bvh_node;
 
 fn main() {
     // scene version throughout the book
@@ -113,6 +115,9 @@ fn many_spheres() {
 
     let material3 = Arc::new(Metal::new(Color::new(0.7, 0.6, 0.5), 0.0));
     world.add(Sphere::new(Point3::new(4.0, 1.0, 0.0), 1.0, material3));
+
+    // Use BVH
+    world = HittableList::new(BvhNode::from_list(&world, &mut rng));
 
     // Camera
     let camera = Camera::new(CameraConfig {
