@@ -7,9 +7,21 @@ pub struct Interval {
     pub max: f64,
 }
 
+impl Default for Interval {
+    fn default() -> Self { EMPTY }
+}
+
 impl Interval {
     /// Creates an interval with the given `min` and `max` bounds.
     pub const fn new(min: f64, max: f64) -> Interval { Interval { min, max } }
+
+    /// Creates new interval that tightly enclose the two input intervals
+    pub fn from_enclosing(a: Interval, b: Interval) -> Interval {
+        Interval {
+            min: f64::min(a.min, b.min),
+            max: f64::max(a.max, b.max),
+        }
+    }
 
     /// Returns the length of the interval (`max - min`).
     ///

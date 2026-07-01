@@ -1,9 +1,10 @@
 use std::sync::Arc;
+use crate::aabb::Aabb;
 use crate::hittable::{HitRecord, Hittable};
 use crate::interval::Interval;
 use crate::material::Material;
 use crate::ray::Ray;
-use crate::vec3::Point3;
+use crate::vec3::{Point3, Vec3};
 
 /// Records information about a ray-object intersection.
 #[derive(Clone)]
@@ -11,6 +12,7 @@ pub struct Sphere {
     pub center: Ray,
     pub radius: f64,
     pub mat_ptr: Arc<dyn Material>,
+    bbox: Aabb,
 }
 
 impl Hittable for Sphere {
@@ -47,16 +49,34 @@ impl Hittable for Sphere {
 
         Some(rec)
     }
+
+    fn bounding_box(&self) -> &Aabb { &self.bbox }
 }
 
 impl Sphere {
-    pub fn new(center: Point3, radius: f64, mat_ptr: Arc<dyn Material>) -> Sphere {
+    pub fn new(static_center: Point3, radius: f64, mat_ptr: Arc<dyn Material>) -> Sphere {
+        let center = Ray::new(static_center, Point3::zero(), 0.0);
+
         // make sure the radius is >= 0
-        Sphere { center: Ray::new(center, Point3::zero(), 0.0), radius: f64::max(0.0, radius), mat_ptr }
+        let radius = f64::max(0.0, radius);
+
+        let rvec = Vec3::new(radius, radius, radius);
+        let bbox = Aabb::from_points(static_center - rvec, static_center + rvec);
+
+        Sphere { center, radius, mat_ptr, bbox }
     }
 
     pub fn new_moving(center1: Point3, center2: Point3, radius: f64, mat_ptr: Arc<dyn Material>) -> Sphere {
+        let center = Ray::new(center1, center2 - center1, 0.0);
+
         // make sure the radius is >= 0
-        Sphere { center: Ray::new(center1, center2 - center1, 0.0), radius: f64::max(0.0, radius), mat_ptr }
+        let radius = f64::max(0.0, radius);
+
+        let rvec = Vec3::new(radius, radius, radius);
+        let bbox1 = Aabb::from_points(center.at(0.0) - rvec, center.at(0.0) + rvec);
+        let bbox2 = Aabb::from_points(center.at(1.0) - rvec, center.at(1.0) + rvec);
+        let bbox = Aabb::from_aabbs(&bbox1, &bbox2);
+
+        Sphere { center, radius, mat_ptr, bbox }
     }
 }

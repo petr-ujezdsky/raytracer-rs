@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use crate::aabb::Aabb;
 use crate::interval::Interval;
 use crate::material::Material;
 use crate::ray::Ray;
@@ -30,6 +31,9 @@ pub trait Hittable: Send + Sync {
     /// Returns `Some(HitRecord)` if the ray `r` hits the object within given `ray_t` interval,
     /// otherwise returns `None`.
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord>;
+
+    /// Returns bounding box for given object
+    fn bounding_box(&self) -> &Aabb;
 }
 
 fn front_face(ray: Ray, outward_normal: Vec3) -> bool {

@@ -2,6 +2,7 @@ use crate::interval::{Interval, EMPTY};
 use crate::ray::Ray;
 use crate::vec3::Point3;
 
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Aabb {
     pub x: Interval,
     pub y: Interval,
@@ -28,6 +29,14 @@ impl Aabb {
         Aabb { x, y, z }
     }
 
+    pub fn from_aabbs(a: &Aabb, b: &Aabb) -> Aabb {
+        Aabb {
+            x: Interval::from_enclosing(a.x, b.x),
+            y: Interval::from_enclosing(a.y, b.y),
+            z: Interval::from_enclosing(a.z, b.z),
+        }
+    }
+
     pub fn axis_interval(&self, axis: usize) -> Interval {
         match axis {
             0 => self.x,
@@ -48,7 +57,7 @@ impl Aabb {
             let t0 = (ax.min - ray_orig[axis]) * adinv;
             let t1 = (ax.max - ray_orig[axis]) * adinv;
 
-            if (t0 < t1) {
+            if t0 < t1 {
                 if t0 > ray_t.min {
                     ray_t.min = t0;
                 }
