@@ -11,6 +11,7 @@ use crate::sphere::Sphere;
 use crate::vec3::{Point3, Vec3};
 use color::Color;
 use crate::bvh_node::BvhNode;
+use crate::texture::CheckerTexture;
 
 mod ray;
 mod hittable;
@@ -23,6 +24,7 @@ mod random;
 mod material;
 mod aabb;
 mod bvh_node;
+mod texture;
 
 fn main() {
     // scene version throughout the book
@@ -35,8 +37,8 @@ fn main() {
 #[allow(dead_code)]
 fn three_spheres() {
     // Materials
-    let material_ground = Arc::new(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
-    let material_center = Arc::new(Lambertian::new(Color::new(0.1, 0.2, 0.5)));
+    let material_ground = Arc::new(Lambertian::from_color(Color::new(0.8, 0.8, 0.0)));
+    let material_center = Arc::new(Lambertian::from_color(Color::new(0.1, 0.2, 0.5)));
     let material_left   = Arc::new(Dielectric::new(1.5));
     let material_bubble   = Arc::new(Dielectric::new(1.0 / 1.5));
     let material_right  = Arc::new(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0));
@@ -75,7 +77,9 @@ fn many_spheres() {
     // World
     let mut world = HittableList::default();
 
-    let ground_material = Arc::new(Lambertian::new(Color::new(0.5, 0.5, 0.5)));
+    let checker = Arc::new(CheckerTexture::from_colors(0.32, Color::new(0.2, 0.3, 0.1), Color::new(0.9, 0.9, 0.9)));
+
+    let ground_material = Arc::new(Lambertian::new(checker));
     world.add(Sphere::new(Point3::new(0.0,-1000.0,0.0), 1000.0, ground_material));
 
     for a in -11..11 {
@@ -89,7 +93,7 @@ fn many_spheres() {
                 if choose_mat < 0.8 {
                     // diffuse
                     let albedo = Color::random(&mut rng) * Color::random(&mut rng);
-                    sphere_material = Arc::new(Lambertian::new(albedo));
+                    sphere_material = Arc::new(Lambertian::from_color(albedo));
                     let center2 = center + Vec3::new(0.0, rng.range_f64(0.0..0.5), 0.0);
                     world.add(Sphere::new_moving(center, center2, 0.2, sphere_material));
                 } else if choose_mat < 0.95 {
@@ -110,7 +114,7 @@ fn many_spheres() {
     let material1 = Arc::new(Dielectric::new(1.5));
     world.add(Sphere::new(Point3::new(0.0, 1.0, 0.0), 1.0, material1));
 
-    let material2 = Arc::new(Lambertian::new(Color::new(0.4, 0.2, 0.1)));
+    let material2 = Arc::new(Lambertian::from_color(Color::new(0.4, 0.2, 0.1)));
     world.add(Sphere::new(Point3::new(-4.0, 1.0, 0.0), 1.0, material2));
 
     let material3 = Arc::new(Metal::new(Color::new(0.7, 0.6, 0.5), 0.0));

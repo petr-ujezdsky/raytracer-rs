@@ -12,6 +12,8 @@ pub struct HitRecord {
     pub normal: Vec3,
     pub mat_ptr: Arc<dyn Material>,
     pub t: f64,
+    pub u: f64,
+    pub v: f64,
     pub front_face: bool,
 }
 
@@ -22,7 +24,11 @@ impl HitRecord {
         let front_face = front_face(r, outward_normal);
         let normal = if front_face { outward_normal } else { -outward_normal };
 
-        HitRecord { p, normal, mat_ptr, t, front_face }
+        // todo!("Implement UV mapping for HitRecord. For now, we will set u and v to 0.0.");
+        let u = 0.0;
+        let v = 0.0;
+
+        HitRecord { p, normal, mat_ptr, t, u, v, front_face }
     }
 }
 
