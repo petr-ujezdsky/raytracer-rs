@@ -1,6 +1,8 @@
 use crate::color::Color;
 use crate::vec3::Vec3;
 use std::sync::Arc;
+use crate::interval::Interval;
+use image::{DynamicImage, GenericImageView, ImageResult};
 
 /// Surface texture.
 pub trait Texture: Send + Sync {
@@ -62,3 +64,49 @@ impl Texture for CheckerTexture {
         if is_even { self.even.value(u, v, p) } else { self.odd.value(u, v, p) }
     }
 }
+
+pub struct ImageTexture {
+    image: ImageResult<DynamicImage>,
+}
+
+impl ImageTexture {
+    pub fn new(path: String) -> Self {
+        let image = image::open(path);
+        Self {
+            image,
+        }
+    }
+
+    // fn pixel_data(&self, x: u32, y: u32) -> Color {
+    //     match self.image {
+    //         Ok(ref image) => {
+    //             let pixel = image.get_pixel(x, y);
+    //             Color::new(pixel[0] as f64, pixel[1] as f64, pixel[2] as f64)
+    //         }
+    //         _ => Color::new(0.0, 1.0, 1.0),
+    //     }
+    // }
+}
+
+impl Texture for ImageTexture {
+    fn value(&self, u: f64, v: f64, p: &Vec3) -> Color {
+        match self.image {
+            Ok(ref image) => {
+                // Clamp input texture coordinates to [0,1] x [1,0]
+                let u = Interval::new(0.0,1.0).clamp(u);
+                // Flip V to image coordinates
+                let v = 1.0 - Interval::new(0.0,1.0).clamp(v);
+
+                let i = (u * image.width() as f64).floor() as u32;
+                let j = (v * image.height() as f64).floor() as u32;
+                let pixel = image.get_pixel(i, j);
+
+                let color_scale = 1.0 / 255.0;
+                Color::new(color_scale * pixel[0] as f64, color_scale * pixel[1] as f64, color_scale * pixel[2] as f64)
+            }
+            // If we have no texture data, then return solid cyan as a debugging aid.
+            _ => Color::new(0.0, 1.0, 1.0),
+        }
+    }
+}
+

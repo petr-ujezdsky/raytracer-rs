@@ -11,7 +11,7 @@ use crate::sphere::Sphere;
 use crate::vec3::{Point3, Vec3};
 use color::Color;
 use crate::bvh_node::BvhNode;
-use crate::texture::CheckerTexture;
+use crate::texture::{CheckerTexture, ImageTexture};
 
 mod ray;
 mod hittable;
@@ -27,13 +27,13 @@ mod bvh_node;
 mod texture;
 
 fn main() {
-    // scene version throughout the book
-    // three_spheres();
-
-    // final render
-    // bouncing_spheres();
-
-    checkered_spheres();
+    match 4 {
+        1 => three_spheres(),
+        2 => bouncing_spheres(),
+        3 => checkered_spheres(),
+        4 => earth(),
+        _ => panic!("invalid scene number"),
+    }
 }
 
 #[allow(dead_code)]
@@ -170,6 +170,43 @@ fn checkered_spheres() {
 
         vfov: 20,
         lookfrom: Point3::new(13.0, 2.0, 3.0),
+        lookat: Point3::zero(),
+        vup: Vec3::new(0.0, 1.0, 0.0),
+
+        defocus_angle: 0.0,
+        // focus_dist: 10.0,
+        ..Default::default()
+    });
+
+    camera.render(&world);
+}
+
+fn earth() {
+    // Rng
+    let rng_seed: Option<u64> = None;
+    let rng_seed = Some(12487324);
+    let mut rng = Random::from_os_or_seeded(rng_seed);
+
+    // World
+    let mut world = HittableList::default();
+
+    let earth_texture = Arc::new(ImageTexture::new("assets/earthmap.jpg".to_string()));
+    let earth_surface = Arc::new(Lambertian::new(earth_texture));
+    let globe = Sphere::new(Point3::new(0.0, 0.0, 0.0), 2.0, earth_surface);
+    world.add(globe);
+
+
+    // Use BVH
+    // world = HittableList::new(BvhNode::from_list(&world, &mut rng));
+
+    // Camera
+    let camera = Camera::new(CameraConfig {
+        image_width: 400,
+        samples_per_pixel: 100,
+        max_depth: 50,
+
+        vfov: 20,
+        lookfrom: Point3::new(0.0, 0.0, 12.0),
         lookat: Point3::zero(),
         vup: Vec3::new(0.0, 1.0, 0.0),
 
