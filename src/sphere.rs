@@ -4,6 +4,7 @@ use crate::hittable::{HitRecord, Hittable};
 use crate::interval::Interval;
 use crate::material::Material;
 use crate::ray::Ray;
+use crate::utils;
 use crate::vec3::{Point3, Vec3};
 
 /// Records information about a ray-object intersection.
@@ -44,8 +45,9 @@ impl Hittable for Sphere {
         // Construct the hit record
         let p = r.at(root);
         let outward_normal = (p - current_center) / self.radius;
+        let (u, v) = Self::get_sphere_uv(outward_normal);
 
-        let rec = HitRecord::new(p, outward_normal, root, r, self.mat_ptr.clone());
+        let rec = HitRecord::new2(p, outward_normal, root, r, self.mat_ptr.clone(), u, v);
 
         Some(rec)
     }
@@ -78,5 +80,21 @@ impl Sphere {
         let bbox = Aabb::from_aabbs(&bbox1, &bbox2);
 
         Sphere { center, radius, mat_ptr, bbox }
+    }
+
+    /// p: a given point on the sphere of radius one, centered at the origin.
+    /// u: returned value [0,1] of angle around the Y axis from X=-1.
+    /// v: returned value [0,1] of angle from Y=-1 to Y=+1.
+    ///     <1 0 0> yields <0.50 0.50>       <-1  0  0> yields <0.00 0.50>
+    ///     <0 1 0> yields <0.50 1.00>       < 0 -1  0> yields <0.50 0.00>
+    ///     <0 0 1> yields <0.25 0.50>       < 0  0 -1> yields <0.75 0.50>
+    fn get_sphere_uv(p: Point3) -> (f64, f64) {
+        let theta = f64::acos(-p.y);
+        let phi = f64::atan2(-p.z, p.x) + utils::PI;
+
+        let u = phi / (2.0 * utils::PI);
+        let v = theta / utils::PI;
+
+        (u, v)
     }
 }

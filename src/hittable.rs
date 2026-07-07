@@ -30,6 +30,15 @@ impl HitRecord {
 
         HitRecord { p, normal, mat_ptr, t, u, v, front_face }
     }
+
+    pub fn new2(p: Point3, outward_normal: Vec3, t: f64, r: Ray, mat_ptr: Arc<dyn Material>, u: f64, v: f64) -> HitRecord {
+        // make sure the normal is always facing against the ray
+        // NOTE: the parameter `normal` is assumed to have unit length.
+        let front_face = front_face(r, outward_normal);
+        let normal = if front_face { outward_normal } else { -outward_normal };
+
+        HitRecord { p, normal, mat_ptr, t, u, v, front_face }
+    }
 }
 
 /// Anything a ray can intersect with.
