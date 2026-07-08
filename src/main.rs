@@ -190,7 +190,7 @@ fn earth() {
     // World
     let mut world = HittableList::default();
 
-    let earth_texture = Arc::new(ImageTexture::new("assets/earthmap.jpg".to_string()));
+    let earth_texture = Arc::new(ImageTexture::new(&"assets/earthmap.jpg".to_string()));
     let earth_surface = Arc::new(Lambertian::new(earth_texture));
     let globe = Sphere::new(Point3::new(0.0, 0.0, 0.0), 2.0, earth_surface);
     world.add(globe);

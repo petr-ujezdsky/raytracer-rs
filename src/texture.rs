@@ -2,7 +2,7 @@ use crate::color::Color;
 use crate::vec3::Vec3;
 use std::sync::Arc;
 use crate::interval::Interval;
-use image::{DynamicImage, GenericImageView, ImageResult};
+use image::{DynamicImage, GenericImageView, ImageResult, RgbImage};
 
 /// Surface texture.
 pub trait Texture: Send + Sync {
@@ -66,14 +66,33 @@ impl Texture for CheckerTexture {
 }
 
 pub struct ImageTexture {
-    image: ImageResult<DynamicImage>,
+    buffer: Option<RgbImage>,   // ImageBuffer<Rgb<u8>, Vec<u8>>
+    width: f64,
+    height: f64,
 }
 
 impl ImageTexture {
-    pub fn new(path: String) -> Self {
-        let image = image::open(path);
-        Self {
-            image,
+    pub fn new(path: &String) -> Self {
+        match image::open(path) {
+            Ok(image) => {
+                let (width, height) = image.dimensions();
+
+                Self {
+                    buffer: Some(image.into_rgb8()),
+                    width: width as f64,
+                    height: height as f64,
+                }
+            },
+
+            Err(e) => {
+                eprintln!("Failed to load image texture from {}: {}", path, e);
+                // Return a default solid color texture (cyan) in case of error
+                Self {
+                    buffer: None,
+                    width: 0.0,
+                    height: 0.0,
+                }
+            }
         }
     }
 
@@ -90,16 +109,16 @@ impl ImageTexture {
 
 impl Texture for ImageTexture {
     fn value(&self, u: f64, v: f64, p: &Vec3) -> Color {
-        match self.image {
-            Ok(ref image) => {
+        match self.buffer {
+            Some(ref buffer) => {
                 // Clamp input texture coordinates to [0,1] x [1,0]
-                let u = Interval::new(0.0,1.0).clamp(u);
+                let u = u.clamp(0.0, 1.0);
                 // Flip V to image coordinates
-                let v = 1.0 - Interval::new(0.0,1.0).clamp(v);
+                let v = 1.0 - v.clamp(0.0, 1.0);
 
-                let i = (u * image.width() as f64).floor() as u32;
-                let j = (v * image.height() as f64).floor() as u32;
-                let pixel = image.get_pixel(i, j);
+                let i = (u * self.width).floor() as u32;
+                let j = (v * self.height).floor() as u32;
+                let pixel = buffer.get_pixel(i, j);
 
                 let color_scale = 1.0 / 255.0;
                 Color::new(color_scale * pixel[0] as f64, color_scale * pixel[1] as f64, color_scale * pixel[2] as f64)
