@@ -1,8 +1,9 @@
 use crate::color::Color;
 use crate::vec3::Vec3;
 use std::sync::Arc;
-use crate::interval::Interval;
-use image::{DynamicImage, GenericImageView, ImageResult, RgbImage};
+use image::{GenericImageView, RgbImage};
+use crate::perlin::Perlin;
+use crate::random::Random;
 
 /// Surface texture.
 pub trait Texture: Send + Sync {
@@ -129,3 +130,20 @@ impl Texture for ImageTexture {
     }
 }
 
+pub struct NoiseTexture {
+    noise: Perlin,
+}
+
+impl NoiseTexture {
+    pub fn new(rng: &mut Random) -> Self {
+        Self {
+            noise: Perlin::new(rng),
+        }
+    }
+}
+
+impl Texture for NoiseTexture {
+    fn value(&self, u: f64, v: f64, p: &Vec3) -> Color {
+        Color::new(1.0,1.0,1.0) * self.noise.noise(p)
+    }
+}

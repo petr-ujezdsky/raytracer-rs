@@ -11,7 +11,7 @@ use crate::sphere::Sphere;
 use crate::vec3::{Point3, Vec3};
 use color::Color;
 use crate::bvh_node::BvhNode;
-use crate::texture::{CheckerTexture, ImageTexture};
+use crate::texture::{CheckerTexture, ImageTexture, NoiseTexture};
 
 mod ray;
 mod hittable;
@@ -25,13 +25,15 @@ mod material;
 mod aabb;
 mod bvh_node;
 mod texture;
+mod perlin;
 
 fn main() {
-    match 4 {
+    match 5 {
         1 => three_spheres(),
         2 => bouncing_spheres(),
         3 => checkered_spheres(),
         4 => earth(),
+        5 => perlin_spheres(),
         _ => panic!("invalid scene number"),
     }
 }
@@ -207,6 +209,39 @@ fn earth() {
 
         vfov: 20,
         lookfrom: Point3::new(0.0, 0.0, 12.0),
+        lookat: Point3::zero(),
+        vup: Vec3::new(0.0, 1.0, 0.0),
+
+        defocus_angle: 0.0,
+        // focus_dist: 10.0,
+        ..Default::default()
+    });
+
+    camera.render(&world);
+}
+
+fn perlin_spheres() {
+    // Rng
+    let rng_seed: Option<u64> = None;
+    let rng_seed = Some(12487324);
+    let mut rng = Random::from_os_or_seeded(rng_seed);
+
+    // World
+    let mut world = HittableList::default();
+
+    let pertext = Arc::new(NoiseTexture::new(&mut rng));
+
+    world.add(Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0, Arc::new(Lambertian::new(pertext.clone()))));
+    world.add(Sphere::new(Point3::new(0.0, 2.0, 0.0), 2.0, Arc::new(Lambertian::new(pertext))));
+
+    // Camera
+    let camera = Camera::new(CameraConfig {
+        image_width: 400,
+        samples_per_pixel: 100,
+        max_depth: 50,
+
+        vfov: 20,
+        lookfrom: Point3::new(13.0, 2.0, 3.0),
         lookat: Point3::zero(),
         vup: Vec3::new(0.0, 1.0, 0.0),
 
