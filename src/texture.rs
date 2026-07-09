@@ -131,12 +131,14 @@ impl Texture for ImageTexture {
 }
 
 pub struct NoiseTexture {
+    scale : f64,
     noise: Perlin,
 }
 
 impl NoiseTexture {
-    pub fn new(rng: &mut Random) -> Self {
+    pub fn new(scale: f64, rng: &mut Random) -> Self {
         Self {
+            scale,
             noise: Perlin::new(rng),
         }
     }
@@ -144,6 +146,6 @@ impl NoiseTexture {
 
 impl Texture for NoiseTexture {
     fn value(&self, u: f64, v: f64, p: &Vec3) -> Color {
-        Color::new(1.0,1.0,1.0) * self.noise.noise(p)
+        Color::new(1.0,1.0,1.0) * self.noise.noise(&(self.scale * *p))
     }
 }

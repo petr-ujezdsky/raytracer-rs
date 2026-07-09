@@ -229,7 +229,7 @@ fn perlin_spheres() {
     // World
     let mut world = HittableList::default();
 
-    let pertext = Arc::new(NoiseTexture::new(&mut rng));
+    let pertext = Arc::new(NoiseTexture::new(4.0, &mut rng));
 
     world.add(Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0, Arc::new(Lambertian::new(pertext.clone()))));
     world.add(Sphere::new(Point3::new(0.0, 2.0, 0.0), 2.0, Arc::new(Lambertian::new(pertext))));
