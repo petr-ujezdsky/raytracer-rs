@@ -15,7 +15,7 @@ impl Aabb {
     }
 
     pub fn new(x: Interval, y: Interval, z: Interval) -> Aabb {
-        Aabb { x, y, z }
+        Aabb { x, y, z }.pad_to_minimum()
     }
 
     pub fn from_points(a: Point3, b: Point3) -> Aabb {
@@ -26,7 +26,7 @@ impl Aabb {
         let y = if a.y <= b.y { Interval::new(a.y, b.y) } else { Interval::new(b.y, a.y) };
         let z = if a.z <= b.z { Interval::new(a.z, b.z) } else { Interval::new(b.z, a.z) };
 
-        Aabb { x, y, z }
+        Aabb { x, y, z }.pad_to_minimum()
     }
 
     pub fn from_aabbs(a: &Aabb, b: &Aabb) -> Aabb {
@@ -91,5 +91,24 @@ impl Aabb {
         }
 
         true
+    }
+
+    /// Adjust the AABB so that no side is narrower than some delta, padding if necessary.
+    fn pad_to_minimum(&mut self) -> Aabb {
+        let delta = 0.0001;
+
+        if self.x.size() < delta {
+            self.x = self.x.expand(delta);
+        }
+
+        if self.y.size() < delta {
+            self.y = self.y.expand(delta);
+        }
+
+        if self.z.size() < delta {
+            self.z = self.z.expand(delta);
+        }
+
+        *self
     }
 }

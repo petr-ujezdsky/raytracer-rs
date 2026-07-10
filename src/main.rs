@@ -11,6 +11,7 @@ use crate::sphere::Sphere;
 use crate::vec3::{Point3, Vec3};
 use color::Color;
 use crate::bvh_node::BvhNode;
+use crate::quad::Quad;
 use crate::texture::{CheckerTexture, ImageTexture, NoiseTexture};
 
 mod ray;
@@ -26,14 +27,16 @@ mod aabb;
 mod bvh_node;
 mod texture;
 mod perlin;
+mod quad;
 
 fn main() {
-    match 5 {
+    match 6 {
         1 => three_spheres(),
         2 => bouncing_spheres(),
         3 => checkered_spheres(),
         4 => earth(),
         5 => perlin_spheres(),
+        6 => quads(),
         _ => panic!("invalid scene number"),
     }
 }
@@ -242,6 +245,43 @@ fn perlin_spheres() {
 
         vfov: 20,
         lookfrom: Point3::new(13.0, 2.0, 3.0),
+        lookat: Point3::zero(),
+        vup: Vec3::new(0.0, 1.0, 0.0),
+
+        defocus_angle: 0.0,
+        // focus_dist: 10.0,
+        ..Default::default()
+    });
+
+    camera.render(&world);
+}
+
+fn quads() {
+    let mut world = HittableList::default();
+
+    // Materials
+    let left_red = Arc::new(Lambertian::from_color(Color::new(1.0, 0.2, 0.2)));
+    let back_green = Arc::new(Lambertian::from_color(Color::new(0.2, 1.0, 0.2)));
+    let right_blue = Arc::new(Lambertian::from_color(Color::new(0.2, 0.2, 1.0)));
+    let upper_orange = Arc::new(Lambertian::from_color(Color::new(1.0, 0.5, 0.0)));
+    let lower_teal = Arc::new(Lambertian::from_color(Color::new(0.2, 0.8, 0.8)));
+
+    // Quads
+    world.add(Quad::new(Point3::new(-3.0, -2.0, 5.0), Vec3::new(0.0, 0.0, -4.0), Vec3::new(0.0, 4.0, 0.0), left_red));
+    world.add(Quad::new(Point3::new(-2.0, -2.0, 0.0), Vec3::new(4.0, 0.0, 0.0), Vec3::new(0.0, 4.0, 0.0), back_green));
+    world.add(Quad::new(Point3::new(3.0, -2.0, 1.0), Vec3::new(0.0, 0.0, 4.0), Vec3::new(0.0, 4.0, 0.0), right_blue));
+    world.add(Quad::new(Point3::new(-2.0, 3.0, 1.0), Vec3::new(4.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 4.0), upper_orange));
+    world.add(Quad::new(Point3::new(-2.0, -3.0, 5.0), Vec3::new(4.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -4.0), lower_teal));
+
+    // Camera
+    let camera = Camera::new(CameraConfig {
+        aspect_ratio: 1.0,
+        image_width: 400,
+        samples_per_pixel: 100,
+        max_depth: 50,
+
+        vfov: 80,
+        lookfrom: Point3::new(0.0, 0.0, 9.0),
         lookat: Point3::zero(),
         vup: Vec3::new(0.0, 1.0, 0.0),
 
