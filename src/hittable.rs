@@ -41,3 +41,35 @@ pub trait Hittable: Send + Sync {
 fn front_face(ray: Ray, outward_normal: Vec3) -> bool {
     ray.direction.dot(outward_normal) < 0.0
 }
+
+pub struct Translate {
+    pub object: Arc<dyn Hittable>,
+    pub offset: Vec3,
+    pub bbox: Aabb,
+}
+
+impl Translate {
+    pub fn new(object: Arc<dyn Hittable>, offset: Vec3) -> Self {
+        let bbox = *object.bounding_box() + offset;
+        Translate { object, offset, bbox }
+    }
+}
+
+impl Hittable for Translate {
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
+        // Move the ray backwards by the offset
+        let offset_r = Ray::new(r.origin - self.offset, r.direction, r.time);
+
+        // Determine whether an intersection exists along the offset ray (and if so, where)
+        let mut hit_record = self.object.hit(offset_r, ray_t)?;
+
+        // Move the intersection point forwards by the offset
+        hit_record.p += self.offset;
+
+        Some(hit_record)
+    }
+
+    fn bounding_box(&self) -> &Aabb {
+        &self.bbox
+    }
+}

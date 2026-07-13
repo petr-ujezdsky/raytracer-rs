@@ -1,4 +1,5 @@
 use crate::utils::INFINITY;
+use std::ops::{Add};
 
 /// A simple struct representing a closed interval [min, max] of floating-point numbers.
 #[derive(Debug, Copy, Clone)]
@@ -55,6 +56,14 @@ impl Interval {
             min: self.min - padding,
             max: self.max + padding,
         }
+    }
+}
+
+impl Add<f64> for Interval {
+    type Output = Interval;
+
+    fn add(self, displacement: f64) -> Interval {
+        Interval::new(self.min + displacement, self.max + displacement)
     }
 }
 
