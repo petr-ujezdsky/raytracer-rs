@@ -30,7 +30,7 @@ mod perlin;
 mod quad;
 
 fn main() {
-    match 7 {
+    match 8 {
         1 => three_spheres(),
         2 => bouncing_spheres(),
         3 => checkered_spheres(),
@@ -38,6 +38,7 @@ fn main() {
         5 => perlin_spheres(),
         6 => quads(),
         7 => simple_light(),
+        8 => cornell_box(),
         _ => panic!("invalid scene number"),
     }
 }
@@ -329,6 +330,49 @@ fn simple_light() {
         vfov: 20,
         lookfrom: Point3::new(26.0, 3.0, 6.0),
         lookat: Point3::new(0.0, 2.0, 0.0),
+        vup: Vec3::new(0.0, 1.0, 0.0),
+
+        defocus_angle: 0.0,
+        // focus_dist: 10.0,
+        ..Default::default()
+    });
+
+    camera.render(&world);
+}
+
+fn cornell_box() {
+    // Rng
+    let rng_seed: Option<u64> = None;
+    let rng_seed = Some(12487324);
+    let mut rng = Random::from_os_or_seeded(rng_seed);
+
+    // World
+    let mut world = HittableList::default();
+
+    // Materials
+    let red = Arc::new(Lambertian::from_color(Color::new(0.65, 0.05, 0.05)));
+    let white = Arc::new(Lambertian::from_color(Color::new(0.73, 0.73, 0.73)));
+    let green = Arc::new(Lambertian::from_color(Color::new(0.12, 0.45, 0.15)));
+    let light = Arc::new(DiffuseLight::from_color(Color::new(15.0, 15.0, 15.0)));
+
+    world.add(Quad::new(Point3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 555.0, 0.0), Vec3::new(0.0, 0.0, 555.0), green));
+    world.add(Quad::new(Point3::zero(), Vec3::new(0.0, 555.0, 0.0), Vec3::new(0.0, 0.0, 555.0), red));
+    world.add(Quad::new(Point3::new(343.0, 554.0, 332.0), Vec3::new(-130.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -105.0), light));
+    world.add(Quad::new(Point3::zero(), Vec3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 555.0), white.clone()));
+    world.add(Quad::new(Point3::new(555.0, 555.0, 555.0), Vec3::new(-555.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -555.0), white.clone()));
+    world.add(Quad::new(Point3::new(0.0, 0.0, 555.0), Vec3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 555.0, 0.0), white));
+
+    // Camera
+    let camera = Camera::new(CameraConfig {
+        aspect_ratio: 1.0,
+        image_width: 600,
+        samples_per_pixel: 200,
+        max_depth: 50,
+        background: Color::zero(),
+
+        vfov: 40,
+        lookfrom: Point3::new(278.0, 278.0, -800.0),
+        lookat: Point3::new(278.0, 278.0, 0.0),
         vup: Vec3::new(0.0, 1.0, 0.0),
 
         defocus_angle: 0.0,
