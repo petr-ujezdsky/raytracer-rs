@@ -81,7 +81,7 @@ fn three_spheres() {
 
 fn bouncing_spheres() {
     // Rng
-    let rng_seed: Option<u64> = None;
+    // let rng_seed: Option<u64> = None;
     let rng_seed = Some(12487324);
     let mut rng = Random::from_os_or_seeded(rng_seed);
 
@@ -222,7 +222,7 @@ fn earth() {
 
 fn perlin_spheres() {
     // Rng
-    let rng_seed: Option<u64> = None;
+    // let rng_seed: Option<u64> = None;
     let rng_seed = Some(12487324);
     let mut rng = Random::from_os_or_seeded(rng_seed);
 
@@ -294,7 +294,7 @@ fn quads() {
 
 fn simple_light() {
     // Rng
-    let rng_seed: Option<u64> = None;
+    // let rng_seed: Option<u64> = None;
     let rng_seed = Some(12487324);
     let mut rng = Random::from_os_or_seeded(rng_seed);
 
