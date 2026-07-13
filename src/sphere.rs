@@ -47,7 +47,7 @@ impl Hittable for Sphere {
         let outward_normal = (p - current_center) / self.radius;
         let (u, v) = Self::get_sphere_uv(outward_normal);
 
-        let rec = HitRecord::new2(p, outward_normal, root, r, self.mat_ptr.clone(), u, v);
+        let rec = HitRecord::new(p, outward_normal, root, r, self.mat_ptr.clone(), u, v);
 
         Some(rec)
     }

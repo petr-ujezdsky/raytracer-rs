@@ -30,15 +30,15 @@ mod perlin;
 mod quad;
 
 fn main() {
-    match 8 {
-        1 => three_spheres(),
-        2 => bouncing_spheres(),
-        3 => checkered_spheres(),
-        4 => earth(),
-        5 => perlin_spheres(),
-        6 => quads(),
-        7 => simple_light(),
-        8 => cornell_box(),
+    match 7 {
+        0 => three_spheres(),
+        1 => bouncing_spheres(),
+        2 => checkered_spheres(),
+        3 => earth(),
+        4 => perlin_spheres(),
+        5 => quads(),
+        6 => simple_light(),
+        7 => cornell_box(),
         _ => panic!("invalid scene number"),
     }
 }
@@ -155,11 +155,6 @@ fn bouncing_spheres() {
 }
 
 fn checkered_spheres() {
-    // Rng
-    let rng_seed: Option<u64> = None;
-    let rng_seed = Some(12487324);
-    let mut rng = Random::from_os_or_seeded(rng_seed);
-
     // World
     let mut world = HittableList::default();
 
@@ -193,11 +188,6 @@ fn checkered_spheres() {
 }
 
 fn earth() {
-    // Rng
-    let rng_seed: Option<u64> = None;
-    let rng_seed = Some(12487324);
-    let mut rng = Random::from_os_or_seeded(rng_seed);
-
     // World
     let mut world = HittableList::default();
 
@@ -341,11 +331,6 @@ fn simple_light() {
 }
 
 fn cornell_box() {
-    // Rng
-    let rng_seed: Option<u64> = None;
-    let rng_seed = Some(12487324);
-    let mut rng = Random::from_os_or_seeded(rng_seed);
-
     // World
     let mut world = HittableList::default();
 

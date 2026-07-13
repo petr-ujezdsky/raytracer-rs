@@ -109,7 +109,7 @@ impl ImageTexture {
 }
 
 impl Texture for ImageTexture {
-    fn value(&self, u: f64, v: f64, p: &Vec3) -> Color {
+    fn value(&self, u: f64, v: f64, _p: &Vec3) -> Color {
         match self.buffer {
             Some(ref buffer) => {
                 // Clamp input texture coordinates to [0,1] x [1,0]
@@ -145,7 +145,7 @@ impl NoiseTexture {
 }
 
 impl Texture for NoiseTexture {
-    fn value(&self, u: f64, v: f64, p: &Vec3) -> Color {
+    fn value(&self, _u: f64, _v: f64, p: &Vec3) -> Color {
         // map [-1; 1] to [0; 1]
         // Color::new(1.0,1.0,1.0) * 0.5 * (1.0 + self.noise.noise(&(self.scale * *p)))
         Color::new(0.5, 0.5, 0.5) * (1.0 + f64::sin(self.scale * p.z + 10.0 * self.noise.turb(&p, 7)))
