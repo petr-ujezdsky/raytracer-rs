@@ -28,6 +28,9 @@ pub struct CameraConfig {
     /// Maximum number of ray bounces into scene
     pub max_depth: u32,
 
+    /// Scene background color
+    pub background: Color,
+
     /// Vertical view angle (field of view), in degrees
     pub vfov: u32,
 
@@ -58,6 +61,7 @@ impl Default for CameraConfig {
             image_width: 400,
             samples_per_pixel: 10,
             max_depth: 10,
+            background: Color::zero(),
             vfov: 90,
             lookfrom: Point3::zero(),
             lookat: Point3::new(0.0, 0.0, -1.0),
@@ -82,6 +86,9 @@ pub struct Camera {
 
     /// Maximum number of ray bounces into scene
     pub max_depth: u32,
+
+    /// Scene background color
+    pub background: Color,
 
     /// Vertical view angle (field of view), in degrees
     pub vfov: u32,
@@ -140,7 +147,7 @@ pub struct Camera {
 
 impl Camera {
     pub fn new(config: CameraConfig) -> Camera {
-        let CameraConfig { aspect_ratio, image_width, samples_per_pixel, max_depth, vfov, lookfrom, lookat, vup, defocus_angle, focus_dist, rng_seed } = config;
+        let CameraConfig { aspect_ratio, image_width, samples_per_pixel, max_depth, background, vfov, lookfrom, lookat, vup, defocus_angle, focus_dist, rng_seed } = config;
 
         // Calculate the image height, and ensure that it's at least 1.
         let image_height = max(1, (image_width as f64 / aspect_ratio) as u32);
@@ -184,6 +191,7 @@ impl Camera {
             image_width,
             samples_per_pixel,
             max_depth,
+            background,
             vfov,
             lookfrom,
             lookat,
@@ -241,7 +249,7 @@ impl Camera {
                         let r = self.get_ray(i, j, &mut rng);
                         let left_half = i < image_width_half;
                         // trace the ray and accumulate color
-                        pixel_color += Self::ray_color(r, self.max_depth, world, &mut rng, left_half);
+                        pixel_color += self.ray_color(r, self.max_depth, world, &mut rng, left_half);
                     }
 
                     self.pixel_samples_scale * pixel_color
@@ -268,7 +276,7 @@ impl Camera {
         println!("Done in {:.2?}", start.elapsed());
     }
 
-    fn ray_color(r: Ray, depth: u32, world: &dyn Hittable, rng: &mut Random, left_half: bool) -> Color {
+    fn ray_color(&self, r: Ray, depth: u32, world: &dyn Hittable, rng: &mut Random, left_half: bool) -> Color {
         // If we've exceeded the ray bounce limit, no more light is gathered.
         if depth <= 0 {
             return Color::zero();
@@ -278,17 +286,21 @@ impl Camera {
         if let Some(rec) = world.hit(r, Interval::new(0.001, utils::INFINITY)) {
             // Use material
             let material = rec.mat_ptr.clone();
+            let color_from_emission = material.emitted(rec.u, rec.v, rec.p);
+
             if let Some(scatter_record) = material.scatter(r, &rec, rng) {
-                return scatter_record.attenuation * Self::ray_color(scatter_record.scattered, depth - 1, world, rng, left_half);
+                let color_from_scatter = scatter_record.attenuation * self.ray_color(scatter_record.scattered, depth - 1, world, rng, left_half);
+
+                // Scattered -> combine both colors
+                return color_from_emission + color_from_scatter;
             }
 
-            return Color::zero();
+            // No scatter -> just emission
+            return color_from_emission;
         }
 
         // No hit -> background
-        let unit_direction = Vec3::unit_vector(r.direction);
-        let a = 0.5*(unit_direction.y + 1.0);
-        (1.0 - a) * Color::new(1.0, 1.0, 1.0) + a * Color::new(0.5, 0.7, 1.0)
+        self.background
     }
 
     /// Construct a camera ray originating from the defocus disk and directed at a randomly

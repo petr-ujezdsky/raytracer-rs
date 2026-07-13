@@ -14,6 +14,10 @@ pub struct ScatterRecord {
 /// Surface material.
 pub trait Material: Send + Sync {
     fn scatter(&self, r_in: Ray, rec: &HitRecord, rng: &mut Random) -> Option<ScatterRecord>;
+
+    fn emitted(&self, u: f64, v: f64, p: Vec3) -> Color {
+        Color::zero()
+    }
 }
 
 pub struct Lambertian {
@@ -119,5 +123,29 @@ impl Material for Dielectric {
             attenuation,
             scattered,
         })
+    }
+}
+
+pub struct DiffuseLight {
+    pub tex: Arc<dyn Texture>,
+}
+
+impl DiffuseLight {
+    pub(crate) fn new(tex: Arc<dyn Texture>) -> DiffuseLight {
+        DiffuseLight { tex }
+    }
+
+    pub(crate) fn from_color(color: Color) -> DiffuseLight {
+        DiffuseLight { tex: Arc::new(SolidColor::new(color)) }
+    }
+}
+
+impl Material for DiffuseLight {
+    fn scatter(&self, r_in: Ray, rec: &HitRecord, rng: &mut Random) -> Option<ScatterRecord> {
+        None
+    }
+
+    fn emitted(&self, u: f64, v: f64, p: Vec3) -> Color {
+        self.tex.value(u, v, &p)
     }
 }

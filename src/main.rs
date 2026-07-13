@@ -5,7 +5,7 @@ mod vec3;
 mod color;
 use crate::camera::{Camera, CameraConfig};
 use crate::hittable_list::HittableList;
-use crate::material::{Dielectric, Lambertian, Material, Metal};
+use crate::material::{Dielectric, DiffuseLight, Lambertian, Material, Metal};
 use crate::random::Random;
 use crate::sphere::Sphere;
 use crate::vec3::{Point3, Vec3};
@@ -30,18 +30,18 @@ mod perlin;
 mod quad;
 
 fn main() {
-    match 6 {
+    match 7 {
         1 => three_spheres(),
         2 => bouncing_spheres(),
         3 => checkered_spheres(),
         4 => earth(),
         5 => perlin_spheres(),
         6 => quads(),
+        7 => simple_light(),
         _ => panic!("invalid scene number"),
     }
 }
 
-#[allow(dead_code)]
 fn three_spheres() {
     // Materials
     let material_ground = Arc::new(Lambertian::from_color(Color::new(0.8, 0.8, 0.0)));
@@ -63,10 +63,13 @@ fn three_spheres() {
         image_width: 400,
         samples_per_pixel: 100,
         max_depth: 50,
+        background: Color::new(0.7, 0.8, 1.0),
+
         vfov: 20,
         lookfrom: Point3::new(-2.0, 2.0, 1.0),
         lookat: Point3::new(0.0, 0.0, -1.0),
         vup: Vec3::new(0.0, 1.0, 0.0),
+
         defocus_angle: 10.0,
         focus_dist: 3.4,
         ..Default::default()
@@ -135,6 +138,7 @@ fn bouncing_spheres() {
         image_width: 1200,
         samples_per_pixel: 100,
         max_depth: 50,
+        background: Color::new(0.7, 0.8, 1.0),
 
         vfov: 20,
         lookfrom: Point3::new(13.0, 2.0, 3.0),
@@ -172,6 +176,7 @@ fn checkered_spheres() {
         image_width: 400,
         samples_per_pixel: 100,
         max_depth: 50,
+        background: Color::new(0.7, 0.8, 1.0),
 
         vfov: 20,
         lookfrom: Point3::new(13.0, 2.0, 3.0),
@@ -209,6 +214,7 @@ fn earth() {
         image_width: 400,
         samples_per_pixel: 100,
         max_depth: 50,
+        background: Color::new(0.7, 0.8, 1.0),
 
         vfov: 20,
         lookfrom: Point3::new(0.0, 0.0, 12.0),
@@ -242,6 +248,7 @@ fn perlin_spheres() {
         image_width: 400,
         samples_per_pixel: 100,
         max_depth: 50,
+        background: Color::new(0.7, 0.8, 1.0),
 
         vfov: 20,
         lookfrom: Point3::new(13.0, 2.0, 3.0),
@@ -279,10 +286,49 @@ fn quads() {
         image_width: 400,
         samples_per_pixel: 100,
         max_depth: 50,
+        background: Color::new(0.7, 0.8, 1.0),
 
         vfov: 80,
         lookfrom: Point3::new(0.0, 0.0, 9.0),
         lookat: Point3::zero(),
+        vup: Vec3::new(0.0, 1.0, 0.0),
+
+        defocus_angle: 0.0,
+        // focus_dist: 10.0,
+        ..Default::default()
+    });
+
+    camera.render(&world);
+}
+
+fn simple_light() {
+    // Rng
+    let rng_seed: Option<u64> = None;
+    let rng_seed = Some(12487324);
+    let mut rng = Random::from_os_or_seeded(rng_seed);
+
+    // World
+    let mut world = HittableList::default();
+
+    let pertext = Arc::new(NoiseTexture::new(4.0, &mut rng));
+
+    world.add(Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0, Arc::new(Lambertian::new(pertext.clone()))));
+    world.add(Sphere::new(Point3::new(0.0, 2.0, 0.0), 2.0, Arc::new(Lambertian::new(pertext))));
+
+    let difflight = Arc::new(DiffuseLight::from_color(Color::new(4.0, 4.0, 4.0)));
+    world.add(Sphere::new(Point3::new(0.0, 7.0, 0.0), 2.0, difflight.clone()));
+    world.add(Quad::new(Point3::new(3.0, 1.0, -2.0), Vec3::new(2.0, 0.0, 0.0), Vec3::new(0.0, 2.0, 0.0), difflight));
+
+    // Camera
+    let camera = Camera::new(CameraConfig {
+        image_width: 400,
+        samples_per_pixel: 100,
+        max_depth: 50,
+        background: Color::zero(),
+
+        vfov: 20,
+        lookfrom: Point3::new(26.0, 3.0, 6.0),
+        lookat: Point3::new(0.0, 2.0, 0.0),
         vup: Vec3::new(0.0, 1.0, 0.0),
 
         defocus_angle: 0.0,
