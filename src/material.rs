@@ -15,7 +15,7 @@ pub struct ScatterRecord {
 pub trait Material: Send + Sync {
     fn scatter(&self, r_in: Ray, rec: &HitRecord<'_>, rng: &mut Random) -> Option<ScatterRecord>;
 
-    fn emitted(&self, u: f64, v: f64, p: Vec3) -> Color {
+    fn emitted(&self, _u: f64, _v: f64, _p: Vec3) -> Color {
         Color::zero()
     }
 }
