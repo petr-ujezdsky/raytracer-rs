@@ -6,6 +6,7 @@ use crate::ray::Ray;
 use crate::vec3::{Point3, Vec3};
 use std::sync::Arc;
 use crate::hittable_list::HittableList;
+use crate::random::Random;
 
 #[derive(Clone)]
 pub struct Quad {
@@ -20,7 +21,7 @@ pub struct Quad {
 }
 
 impl Hittable for Quad {
-    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord<'_>> {
+    fn hit(&self, r: Ray, ray_t: Interval, _rng: &mut Random) -> Option<HitRecord<'_>> {
         let denom = self.normal.dot(r.direction);
 
         // No hit if the ray is parallel to the plane.

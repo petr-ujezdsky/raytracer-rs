@@ -2,6 +2,7 @@ use std::sync::Arc;
 use crate::aabb::Aabb;
 use crate::interval::Interval;
 use crate::material::Material;
+use crate::random::Random;
 use crate::ray::Ray;
 use crate::utils;
 use crate::vec3::{Point3, Vec3};
@@ -33,7 +34,7 @@ impl<'a> HitRecord<'a> {
 pub trait Hittable: Send + Sync {
     /// Returns `Some(HitRecord)` if the ray `r` hits the object within given `ray_t` interval,
     /// otherwise returns `None`.
-    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord<'_>>;
+    fn hit(&self, r: Ray, ray_t: Interval, rng: &mut Random) -> Option<HitRecord<'_>>;
 
     /// Returns bounding box for given object
     fn bounding_box(&self) -> &Aabb;
@@ -57,12 +58,12 @@ impl Translate {
 }
 
 impl Hittable for Translate {
-    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord<'_>> {
+    fn hit(&self, r: Ray, ray_t: Interval, rng: &mut Random) -> Option<HitRecord<'_>> {
         // Move the ray backwards by the offset
         let offset_r = Ray::new(r.origin - self.offset, r.direction, r.time);
 
         // Determine whether an intersection exists along the offset ray (and if so, where)
-        let mut hit_record = self.object.hit(offset_r, ray_t)?;
+        let mut hit_record = self.object.hit(offset_r, ray_t, rng)?;
 
         // Move the intersection point forwards by the offset
         hit_record.p += self.offset;
@@ -120,7 +121,7 @@ impl RotateY {
 }
 
 impl Hittable for RotateY {
-    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord<'_>> {
+    fn hit(&self, r: Ray, ray_t: Interval, rng: &mut Random) -> Option<HitRecord<'_>> {
         // Rotate the ray backwards by the angle
         let rotated_origin = Vec3::new(
             self.cos_theta * r.origin.x - self.sin_theta * r.origin.z,
@@ -137,7 +138,7 @@ impl Hittable for RotateY {
         let rotated_ray = Ray::new(rotated_origin, rotated_direction, r.time);
 
         // Determine whether an intersection exists in object space (and if so, where).
-        let mut hit_record = self.object.hit(rotated_ray, ray_t)?;
+        let mut hit_record = self.object.hit(rotated_ray, ray_t, rng)?;
 
         // Transform the intersection from object space back to world space.
         hit_record.p = Vec3::new(

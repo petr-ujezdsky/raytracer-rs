@@ -11,6 +11,7 @@ use crate::sphere::Sphere;
 use crate::vec3::{Point3, Vec3};
 use color::Color;
 use crate::bvh_node::BvhNode;
+use crate::constant_medium::ConstantMedium;
 use crate::hittable::{Hittable, RotateY, Translate};
 use crate::quad::Quad;
 use crate::texture::{CheckerTexture, ImageTexture, NoiseTexture};
@@ -29,9 +30,10 @@ mod bvh_node;
 mod texture;
 mod perlin;
 mod quad;
+mod constant_medium;
 
 fn main() {
-    match 7 {
+    match 8 {
         0 => three_spheres(),
         1 => bouncing_spheres(),
         2 => checkered_spheres(),
@@ -40,6 +42,7 @@ fn main() {
         5 => quads(),
         6 => simple_light(),
         7 => cornell_box(),
+        8 => cornell_smoke(),
         _ => panic!("invalid scene number"),
     }
 }
@@ -386,13 +389,71 @@ fn cornell_box() {
     // boxes inside the cornell box
     let mut box1: Arc<dyn Hittable> = Arc::new(Quad::create_box(Point3::zero(), Point3::new(165.0, 330.0, 165.0), white.clone()));
     box1 = Arc::new(RotateY::new(box1, 15.0));
-    let box11 = Translate::new(box1, Vec3::new(265.0, 0.0, 295.0));
-    world.add(box11);
+    box1 = Arc::new(Translate::new(box1, Vec3::new(265.0, 0.0, 295.0)));
+    world.add_arc(box1);
 
     let mut box2: Arc<dyn Hittable> = Arc::new(Quad::create_box(Point3::zero(), Point3::new(165.0, 165.0, 165.0), white.clone()));
     box2 = Arc::new(RotateY::new(box2, -18.0));
-    let box22 = Translate::new(box2, Vec3::new(130.0, 0.0, 65.0));
-    world.add(box22);
+    box2 = Arc::new(Translate::new(box2, Vec3::new(130.0, 0.0, 65.0)));
+    world.add_arc(box2);
+
+    // Camera
+    let camera = Camera::new(CameraConfig {
+        aspect_ratio: 1.0,
+        image_width: 600,
+        samples_per_pixel: 200,
+        max_depth: 50,
+        background: Color::zero(),
+
+        vfov: 40,
+        lookfrom: Point3::new(278.0, 278.0, -800.0),
+        lookat: Point3::new(278.0, 278.0, 0.0),
+        vup: Vec3::new(0.0, 1.0, 0.0),
+
+        defocus_angle: 0.0,
+        // focus_dist: 10.0,
+
+        rng_seed,
+        ..Default::default()
+    });
+
+    camera.render(&world);
+}
+
+fn cornell_smoke() {
+    // Rng
+    // let rng_seed: Option<u64> = None;
+    let rng_seed = Some(12487324);
+
+    // World
+    let mut world = HittableList::default();
+
+    // Materials
+    let red = Arc::new(Lambertian::from_color(Color::new(0.65, 0.05, 0.05)));
+    let white = Arc::new(Lambertian::from_color(Color::new(0.73, 0.73, 0.73)));
+    let green = Arc::new(Lambertian::from_color(Color::new(0.12, 0.45, 0.15)));
+    let light = Arc::new(DiffuseLight::from_color(Color::new(7.0, 7.0, 7.0)));
+
+    // cornell sides
+    world.add(Quad::new(Point3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 555.0, 0.0), Vec3::new(0.0, 0.0, 555.0), green));
+    world.add(Quad::new(Point3::zero(), Vec3::new(0.0, 555.0, 0.0), Vec3::new(0.0, 0.0, 555.0), red));
+    world.add(Quad::new(Point3::new(113.0,554.0,127.0), Vec3::new(330.0,0.0,0.0), Vec3::new(0.0, 0.0, 305.0), light));
+    world.add(Quad::new(Point3::new(0.0, 555.0, 0.0), Vec3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 555.0), white.clone()));
+    world.add(Quad::new(Point3::zero(), Vec3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 555.0), white.clone()));
+    world.add(Quad::new(Point3::new(0.0, 0.0, 555.0), Vec3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 555.0, 0.0), white.clone()));
+
+    // boxes inside the cornell box
+    let mut box1: Arc<dyn Hittable> = Arc::new(Quad::create_box(Point3::zero(), Point3::new(165.0, 330.0, 165.0), white.clone()));
+    box1 = Arc::new(RotateY::new(box1, 15.0));
+    box1 = Arc::new(Translate::new(box1, Vec3::new(265.0, 0.0, 295.0)));
+    box1 = Arc::new(ConstantMedium::from_color(box1, 0.01, Color::zero()));
+    world.add_arc(box1);
+
+    let mut box2: Arc<dyn Hittable> = Arc::new(Quad::create_box(Point3::zero(), Point3::new(165.0, 165.0, 165.0), white.clone()));
+    box2 = Arc::new(RotateY::new(box2, -18.0));
+    box2 = Arc::new(Translate::new(box2, Vec3::new(130.0, 0.0, 65.0)));
+    box2 = Arc::new(ConstantMedium::from_color(box2, 0.01, Color::new(1.0, 1.0, 1.0)));
+    world.add_arc(box2);
 
     // Camera
     let camera = Camera::new(CameraConfig {

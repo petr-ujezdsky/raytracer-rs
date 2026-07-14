@@ -3,6 +3,7 @@ use crate::aabb::Aabb;
 use crate::hittable::{HitRecord, Hittable};
 use crate::interval::Interval;
 use crate::material::Material;
+use crate::random::Random;
 use crate::ray::Ray;
 use crate::utils;
 use crate::vec3::{Point3, Vec3};
@@ -17,7 +18,7 @@ pub struct Sphere {
 }
 
 impl Hittable for Sphere {
-    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord<'_>> {
+    fn hit(&self, r: Ray, ray_t: Interval, _rng: &mut Random) -> Option<HitRecord<'_>> {
         let current_center = self.center.at(r.time);
         let oc = current_center - r.origin;
 

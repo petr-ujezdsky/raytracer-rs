@@ -14,19 +14,19 @@ pub struct BvhNode {
 }
 
 impl Hittable for BvhNode {
-    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord<'_>> {
+    fn hit(&self, r: Ray, ray_t: Interval, rng: &mut Random) -> Option<HitRecord<'_>> {
         if !self.bbox.hit(r, ray_t) {
             return None;
         }
 
-        let hit_left = self.left.hit(r, ray_t);
+        let hit_left = self.left.hit(r, ray_t, rng);
 
         let t_max = match &hit_left {
             Some(rec) => rec.t,
             None => ray_t.max,
         };
 
-        let hit_right = self.right.hit(r, Interval::new(ray_t.min, t_max));
+        let hit_right = self.right.hit(r, Interval::new(ray_t.min, t_max), rng);
 
         // if hit_right is some, it is closer than hit_left -> use it
         // else return hit_left (some / none)

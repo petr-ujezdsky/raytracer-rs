@@ -2,6 +2,7 @@ use std::sync::Arc;
 use crate::aabb::Aabb;
 use crate::hittable::{HitRecord, Hittable};
 use crate::interval::Interval;
+use crate::random::Random;
 use crate::ray::Ray;
 
 /// List of hittable objects.
@@ -17,22 +18,26 @@ impl HittableList {
     }
 
     pub fn add<T: Hittable + 'static>(&mut self, object: T) {
+        self.add_arc(Arc::new(object));
+    }
+
+    pub fn add_arc(&mut self, object: Arc<dyn Hittable>) {
         let bbox = object.bounding_box();
         self.bbox = Aabb::from_aabbs(&self.bbox, bbox);
 
-        self.objects.push(Arc::new(object));
+        self.objects.push(object);
     }
 
     pub fn clear(&mut self) { self.objects.clear();    }
 }
 
 impl Hittable for HittableList {
-    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord<'_>> {
+    fn hit(&self, r: Ray, ray_t: Interval, rng: &mut Random) -> Option<HitRecord<'_>> {
         let mut search_range_t = ray_t;
         let mut result = None;
 
         for object in self.objects.iter() {
-            if let Some(rec) = object.hit(r, search_range_t) {
+            if let Some(rec) = object.hit(r, search_range_t, rng) {
                 search_range_t = Interval::new(ray_t.min, rec.t);
                 result = Some(rec);
             }
