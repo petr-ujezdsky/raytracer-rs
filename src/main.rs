@@ -45,6 +45,10 @@ fn main() {
 }
 
 fn three_spheres() {
+    // Rng
+    // let rng_seed: Option<u64> = None;
+    let rng_seed = Some(12487324);
+
     // Materials
     let material_ground = Arc::new(Lambertian::from_color(Color::new(0.8, 0.8, 0.0)));
     let material_center = Arc::new(Lambertian::from_color(Color::new(0.1, 0.2, 0.5)));
@@ -74,6 +78,8 @@ fn three_spheres() {
 
         defocus_angle: 10.0,
         focus_dist: 3.4,
+
+        rng_seed,
         ..Default::default()
     });
 
@@ -149,6 +155,8 @@ fn bouncing_spheres() {
 
         defocus_angle: 0.6,
         focus_dist: 10.0,
+
+        rng_seed,
         ..Default::default()
     });
 
@@ -156,6 +164,10 @@ fn bouncing_spheres() {
 }
 
 fn checkered_spheres() {
+    // Rng
+    // let rng_seed: Option<u64> = None;
+    let rng_seed = Some(12487324);
+
     // World
     let mut world = HittableList::default();
 
@@ -182,6 +194,8 @@ fn checkered_spheres() {
 
         defocus_angle: 0.0,
         // focus_dist: 10.0,
+
+        rng_seed,
         ..Default::default()
     });
 
@@ -189,6 +203,10 @@ fn checkered_spheres() {
 }
 
 fn earth() {
+    // Rng
+    // let rng_seed: Option<u64> = None;
+    let rng_seed = Some(12487324);
+
     // World
     let mut world = HittableList::default();
 
@@ -215,6 +233,8 @@ fn earth() {
 
         defocus_angle: 0.0,
         // focus_dist: 10.0,
+
+        rng_seed,
         ..Default::default()
     });
 
@@ -249,6 +269,8 @@ fn perlin_spheres() {
 
         defocus_angle: 0.0,
         // focus_dist: 10.0,
+
+        rng_seed,
         ..Default::default()
     });
 
@@ -256,6 +278,10 @@ fn perlin_spheres() {
 }
 
 fn quads() {
+    // Rng
+    // let rng_seed: Option<u64> = None;
+    let rng_seed = Some(12487324);
+
     let mut world = HittableList::default();
 
     // Materials
@@ -287,6 +313,8 @@ fn quads() {
 
         defocus_angle: 0.0,
         // focus_dist: 10.0,
+
+        rng_seed,
         ..Default::default()
     });
 
@@ -325,6 +353,8 @@ fn simple_light() {
 
         defocus_angle: 0.0,
         // focus_dist: 10.0,
+
+        rng_seed,
         ..Default::default()
     });
 
@@ -332,6 +362,10 @@ fn simple_light() {
 }
 
 fn cornell_box() {
+    // Rng
+    // let rng_seed: Option<u64> = None;
+    let rng_seed = Some(12487324);
+
     // World
     let mut world = HittableList::default();
 
@@ -375,6 +409,8 @@ fn cornell_box() {
 
         defocus_angle: 0.0,
         // focus_dist: 10.0,
+
+        rng_seed,
         ..Default::default()
     });
 
