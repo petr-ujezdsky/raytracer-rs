@@ -11,6 +11,7 @@ use crate::sphere::Sphere;
 use crate::vec3::{Point3, Vec3};
 use color::Color;
 use crate::bvh_node::BvhNode;
+use crate::hittable::{Hittable, RotateY, Translate};
 use crate::quad::Quad;
 use crate::texture::{CheckerTexture, ImageTexture, NoiseTexture};
 
@@ -349,8 +350,15 @@ fn cornell_box() {
     world.add(Quad::new(Point3::new(0.0, 0.0, 555.0), Vec3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 555.0, 0.0), white.clone()));
 
     // boxes inside the cornell box
-    world.add(Quad::create_box(Point3::new(130.0, 0.0, 65.0), Point3::new(295.0, 165.0, 230.0), white.clone()));
-    world.add(Quad::create_box(Point3::new(265.0, 0.0, 295.0), Point3::new(430.0, 330.0, 460.0), white));
+    let mut box1: Arc<dyn Hittable> = Arc::new(Quad::create_box(Point3::zero(), Point3::new(165.0, 330.0, 165.0), white.clone()));
+    box1 = Arc::new(RotateY::new(box1, 15.0));
+    let box11 = Translate::new(box1, Vec3::new(265.0, 0.0, 295.0));
+    world.add(box11);
+
+    let mut box2: Arc<dyn Hittable> = Arc::new(Quad::create_box(Point3::zero(), Point3::new(165.0, 165.0, 165.0), white.clone()));
+    box2 = Arc::new(RotateY::new(box2, -18.0));
+    let box22 = Translate::new(box2, Vec3::new(130.0, 0.0, 65.0));
+    world.add(box22);
 
     // Camera
     let camera = Camera::new(CameraConfig {
