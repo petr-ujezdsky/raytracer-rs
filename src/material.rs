@@ -13,7 +13,7 @@ pub struct ScatterRecord {
 
 /// Surface material.
 pub trait Material: Send + Sync {
-    fn scatter(&self, r_in: Ray, rec: &HitRecord, rng: &mut Random) -> Option<ScatterRecord>;
+    fn scatter(&self, r_in: Ray, rec: &HitRecord<'_>, rng: &mut Random) -> Option<ScatterRecord>;
 
     fn emitted(&self, u: f64, v: f64, p: Vec3) -> Color {
         Color::zero()
@@ -36,7 +36,7 @@ impl Lambertian {
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, r_in: Ray, rec: &HitRecord, rng: &mut Random) -> Option<ScatterRecord> {
+    fn scatter(&self, r_in: Ray, rec: &HitRecord<'_>, rng: &mut Random) -> Option<ScatterRecord> {
         let mut scatter_direction = rec.normal + Vec3::random_unit_vector(rng);
 
         // Catch degenerate scatter direction
@@ -63,7 +63,7 @@ impl Metal {
 }
 
 impl Material for Metal {
-    fn scatter(&self, r_in: Ray, rec: &HitRecord, rng: &mut Random) -> Option<ScatterRecord> {
+    fn scatter(&self, r_in: Ray, rec: &HitRecord<'_>, rng: &mut Random) -> Option<ScatterRecord> {
         let mut reflected = Vec3::reflect(r_in.direction, rec.normal);
 
         reflected = reflected.unit_vector() + (self.fuzz * Vec3::random_unit_vector(rng));
@@ -101,7 +101,7 @@ impl Dielectric {
 }
 
 impl Material for Dielectric {
-    fn scatter(&self, r_in: Ray, rec: &HitRecord, rng: &mut Random) -> Option<ScatterRecord> {
+    fn scatter(&self, r_in: Ray, rec: &HitRecord<'_>, rng: &mut Random) -> Option<ScatterRecord> {
         let attenuation = Color::new(1.0, 1.0, 1.0);
         let ri = if rec.front_face { 1.0 / self.refraction_index } else { self.refraction_index };
 
@@ -141,7 +141,7 @@ impl DiffuseLight {
 }
 
 impl Material for DiffuseLight {
-    fn scatter(&self, _r_in: Ray, _rec: &HitRecord, _rng: &mut Random) -> Option<ScatterRecord> {
+    fn scatter(&self, _r_in: Ray, _rec: &HitRecord<'_>, _rng: &mut Random) -> Option<ScatterRecord> {
         None
     }
 

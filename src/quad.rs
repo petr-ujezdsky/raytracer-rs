@@ -20,7 +20,7 @@ pub struct Quad {
 }
 
 impl Hittable for Quad {
-    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord<'_>> {
         let denom = self.normal.dot(r.direction);
 
         // No hit if the ray is parallel to the plane.
@@ -44,7 +44,7 @@ impl Hittable for Quad {
         let (u, v) = Self::interior_uv_coords(alpha, beta)?;
 
         // Ray hits the 2D shape; set the rest of the hit record and return true.
-        Some(HitRecord::new(intersection, self.normal, t, r, self.mat.clone(), u, v))
+        Some(HitRecord::new(intersection, self.normal, t, r, self.mat.as_ref(), u, v))
     }
 
     fn bounding_box(&self) -> &Aabb {

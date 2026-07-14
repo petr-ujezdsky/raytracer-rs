@@ -8,18 +8,18 @@ use crate::vec3::{Point3, Vec3};
 
 /// Records information about a ray-object intersection.
 #[derive(Clone)]
-pub struct HitRecord {
+pub struct HitRecord<'a> {
     pub p: Point3,
     pub normal: Vec3,
-    pub mat_ptr: Arc<dyn Material>,
+    pub mat_ptr: &'a dyn Material,
     pub t: f64,
     pub u: f64,
     pub v: f64,
     pub front_face: bool,
 }
 
-impl HitRecord {
-    pub fn new(p: Point3, outward_normal: Vec3, t: f64, r: Ray, mat_ptr: Arc<dyn Material>, u: f64, v: f64) -> HitRecord {
+impl<'a> HitRecord<'a> {
+    pub fn new(p: Point3, outward_normal: Vec3, t: f64, r: Ray, mat_ptr: &'a dyn Material, u: f64, v: f64) -> HitRecord<'a> {
         // make sure the normal is always facing against the ray
         // NOTE: the parameter `normal` is assumed to have unit length.
         let front_face = front_face(r, outward_normal);
@@ -33,7 +33,7 @@ impl HitRecord {
 pub trait Hittable: Send + Sync {
     /// Returns `Some(HitRecord)` if the ray `r` hits the object within given `ray_t` interval,
     /// otherwise returns `None`.
-    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord>;
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord<'_>>;
 
     /// Returns bounding box for given object
     fn bounding_box(&self) -> &Aabb;
@@ -57,7 +57,7 @@ impl Translate {
 }
 
 impl Hittable for Translate {
-    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord<'_>> {
         // Move the ray backwards by the offset
         let offset_r = Ray::new(r.origin - self.offset, r.direction, r.time);
 
@@ -120,7 +120,7 @@ impl RotateY {
 }
 
 impl Hittable for RotateY {
-    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord<'_>> {
         // Rotate the ray backwards by the angle
         let rotated_origin = Vec3::new(
             self.cos_theta * r.origin.x - self.sin_theta * r.origin.z,

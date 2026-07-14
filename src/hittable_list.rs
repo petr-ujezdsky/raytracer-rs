@@ -27,7 +27,7 @@ impl HittableList {
 }
 
 impl Hittable for HittableList {
-    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord<'_>> {
         let mut search_range_t = ray_t;
         let mut result = None;
 

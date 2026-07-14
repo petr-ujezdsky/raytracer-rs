@@ -17,7 +17,7 @@ pub struct Sphere {
 }
 
 impl Hittable for Sphere {
-    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord<'_>> {
         let current_center = self.center.at(r.time);
         let oc = current_center - r.origin;
 
@@ -47,7 +47,7 @@ impl Hittable for Sphere {
         let outward_normal = (p - current_center) / self.radius;
         let (u, v) = Self::get_sphere_uv(outward_normal);
 
-        let rec = HitRecord::new(p, outward_normal, root, r, self.mat_ptr.clone(), u, v);
+        let rec = HitRecord::new(p, outward_normal, root, r, self.mat_ptr.as_ref(), u, v);
 
         Some(rec)
     }

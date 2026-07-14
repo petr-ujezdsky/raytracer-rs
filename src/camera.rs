@@ -285,7 +285,7 @@ impl Camera {
         // Try to hit something in the world
         if let Some(rec) = world.hit(r, Interval::new(0.001, utils::INFINITY)) {
             // Use material
-            let material = rec.mat_ptr.clone();
+            let material = rec.mat_ptr;
             let color_from_emission = material.emitted(rec.u, rec.v, rec.p);
 
             if let Some(scatter_record) = material.scatter(r, &rec, rng) {
