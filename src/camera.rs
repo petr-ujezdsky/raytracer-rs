@@ -10,6 +10,7 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Instant;
+use indicatif::{ProgressBar, ProgressStyle};
 use rayon::iter::IntoParallelIterator;
 use crate::random::Random;
 
@@ -233,6 +234,17 @@ impl Camera {
         let scanlines_done = AtomicU32::new(0);
         let total = self.image_height;
 
+        // Init progress bar
+        let progress_bar = ProgressBar::new(total as u64);
+        progress_bar.set_style(
+            ProgressStyle::with_template(
+                "{spinner:.green} [{bar:30.cyan/blue}] {pos}/{len} ({eta}) {msg}",
+            )
+                .unwrap()
+                .progress_chars("#>-"),
+        );
+
+        // Render the image in parallel
         let pixels: Vec<Color> = (0..self.image_height)
             .into_par_iter()
             .flat_map(|j| {
@@ -258,7 +270,8 @@ impl Camera {
                 // Row finished: bump the counter and log remaining work.
                 // fetch_add returns the value *before* incrementing, so add 1.
                 let done = scanlines_done.fetch_add(1, Ordering::Relaxed) + 1;
-                eprintln!("Scanline #{:03} done, remaining: {}", j, total - done);
+                progress_bar.println(&format!("Scanline #{:03} done, remaining: {}", j, total - done));
+                progress_bar.inc(1);
 
                 row
             })
@@ -273,7 +286,7 @@ impl Camera {
         writer.flush().expect("Failed to flush buffer");
 
         // log elapsed time - "?" (debug) is in dynamic units (1.23s, 350.00ms, 12.50µs)
-        println!("Done in {:.2?}", start.elapsed());
+        progress_bar.finish_with_message(format!("Done in {:.2?}", start.elapsed()));
     }
 
     fn ray_color(&self, r: Ray, depth: u32, world: &dyn Hittable, rng: &mut Random, left_half: bool) -> Color {
