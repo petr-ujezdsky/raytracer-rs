@@ -234,8 +234,8 @@ impl Camera {
         let scanlines_done = AtomicU32::new(0);
         let total = self.image_height;
 
-        // Init progress bar
-        let progress_bar = ProgressBar::new(total as u64);
+        // Init progress bar (total pixels count)
+        let progress_bar = ProgressBar::new((self.image_height * self.image_width) as u64);
         progress_bar.set_style(
             ProgressStyle::with_template(
                 "{spinner:.green} [{bar:30.cyan/blue}] {pos}/{len} ({eta}) {msg}",
@@ -264,6 +264,7 @@ impl Camera {
                         pixel_color += self.ray_color(r, self.max_depth, world, &mut rng, left_half);
                     }
 
+                    progress_bar.inc(1);
                     self.pixel_samples_scale * pixel_color
                 }).collect();
 
@@ -271,7 +272,6 @@ impl Camera {
                 // fetch_add returns the value *before* incrementing, so add 1.
                 let done = scanlines_done.fetch_add(1, Ordering::Relaxed) + 1;
                 progress_bar.println(&format!("Scanline #{:03} done, remaining: {}", j, total - done));
-                progress_bar.inc(1);
 
                 row
             })
