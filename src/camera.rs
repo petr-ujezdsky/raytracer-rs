@@ -330,22 +330,36 @@ impl Camera {
                 WindowOptions::default(),
             ).expect("Failed to open preview window");
 
-            // Cap redraws so the loop doesn't busy-spin.
-            window.set_target_fps(30);
-
             let mut buffer = vec![0u32; width * height];
             let mut finished_shown = false;
+            let mut last_snapshot = Instant::now();
+            // Re-copy the image at ~30 FPS; the window itself is refreshed (and
+            // events pumped) every iteration via update_with_buffer.
+            let snapshot_interval = std::time::Duration::from_millis(33);
+
             while window.is_open() && !window.is_key_down(Key::Escape) {
-                // Snapshot the shared framebuffer into the window's buffer
-                for (dst, src) in buffer.iter_mut().zip(framebuffer.iter()) {
-                    *dst = src.load(Ordering::Relaxed);
+                let done = render_done.load(Ordering::Relaxed);
+
+                // Snapshot the shared framebuffer into the window buffer while the
+                // render is still running (throttled), and once more when it finishes.
+                if !finished_shown && (last_snapshot.elapsed() >= snapshot_interval || done) {
+                    for (dst, src) in buffer.iter_mut().zip(framebuffer.iter()) {
+                        *dst = src.load(Ordering::Relaxed);
+                    }
+                    last_snapshot = Instant::now();
+
+                    if done {
+                        window.set_title("raytracer-rs — done (Esc to close)");
+                        finished_shown = true;
+                    }
                 }
+
+                // Always drive the window through update_with_buffer only (mixing it
+                // with update() on the same window is not supported by minifb).
                 window.update_with_buffer(&buffer, width, height).expect("Failed to update window");
 
-                if !finished_shown && render_done.load(Ordering::Relaxed) {
-                    window.set_title("raytracer-rs — done (Esc to close)");
-                    finished_shown = true;
-                }
+                // Yield briefly instead of busy-spinning (~250 Hz event pump).
+                std::thread::sleep(std::time::Duration::from_millis(4));
             }
 
             // Window closed: signal the render thread to stop. The scope then
