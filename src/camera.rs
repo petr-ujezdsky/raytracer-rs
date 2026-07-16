@@ -1,9 +1,10 @@
-use crate::color::{color_to_u32, u32_to_color, write_color, Color};
+use crate::color::{u32_to_color, write_color, Color};
 use crate::frame_buffer::FrameBuffer;
 use crate::hittable::Hittable;
 use crate::interval::Interval;
 use crate::random::Random;
 use crate::ray::Ray;
+use crate::tile_manager::TileManager;
 use crate::utils;
 use crate::vec3::{Point3, Vec3};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -222,7 +223,10 @@ impl Camera {
         // Shared framebuffer for the live preview. Each pixel holds a packed
         // 0x00RRGGBB value and is written by exactly one thread, so relaxed
         // atomics are enough to publish progress to the window loop.
-        let mut framebuffer = FrameBuffer::new(width, height);
+        let frame_buffer = FrameBuffer::new(width, height);
+
+        // Manager for tiling the image and tracking which tiles are currently being rendered.
+        let tile_manager = TileManager::new(50, 50, &frame_buffer);
 
         let render_done = AtomicBool::new(false);
         // Set when the preview window is closed so the render can bail out early.
@@ -250,7 +254,7 @@ impl Camera {
                 let tiles_count_done = AtomicU32::new(0);
 
                 // Render the image in parallel
-                framebuffer.get_tiles()
+                tile_manager.get_tiles_par_iter()
                     .for_each(|tile| {
                         // Initialize random numbers generator *per thread*
                         let mut rng = match self.rng_seed {
@@ -258,70 +262,36 @@ impl Camera {
                             None => Random::from_os(),
                         };
 
-                        let mut tile_buffer = vec![0u32; (tile.width * tile.height) as usize];
+                        tile_manager.start_tile(&tile);
 
-                        // Draw marks - orange rectangle
-                        let mark_color = Color::new(1.0, 0.65, 0.0);
-                        let (x0, y0) = (tile.x, tile.y);
-                        let (x1, y1) = (tile.x + tile.width - 1, tile.y + tile.height - 1);
-
-                        // horizontal edges
-                        for x in x0..=x1 {
-                            framebuffer.write_pixel(x, y0, mark_color);
-                            framebuffer.write_pixel(x, y1, mark_color);
-                        }
-                        // vertical edges
-                        for y in y0..=y1 {
-                            framebuffer.write_pixel(x0, y, mark_color);
-                            framebuffer.write_pixel(x1, y, mark_color);
-                        }
-
-                        for t_j in 0..tile.height {
-                            for t_i in 0..tile.width {
-                                // Bail out fast on every remaining pixel once cancelled.
-                                if cancelled.load(Ordering::Relaxed) {
-                                    return;
-                                }
-
-                                // Global coordinates
-                                let i = tile.x + t_i;
-                                let j = tile.y + t_j;
-
-                                let mut pixel_color = Color::zero();
-
-                                for _sample in 0..self.samples_per_pixel {
-                                    let r = self.get_ray(i, j, &mut rng);
-                                    // trace the ray and accumulate color
-                                    pixel_color += self.ray_color(r, self.max_depth, world, &mut rng);
-                                }
-
-                                let color = self.pixel_samples_scale * pixel_color;
-
-                                // Publish the finished pixel to the live preview buffer (do not overwrite marks)
-                                if (i != x0 && i != x1 && j != y0 && j != y1) {
-                                    framebuffer.write_pixel(i, j, color);
-                                }
-
-                                // Store in local tile buffer
-                                let idx_tile = (t_j * tile.width + t_i) as usize;
-                                tile_buffer[idx_tile] = color_to_u32(color);
-
-                                progress_bar.inc(1);
+                        for (i, j) in tile.pixels_iter() {
+                            // Bail out fast on every remaining pixel once cancelled.
+                            if cancelled.load(Ordering::Relaxed) {
+                                return;
                             }
+
+                            let mut pixel_color = Color::zero();
+
+                            for _sample in 0..self.samples_per_pixel {
+                                let r = self.get_ray(i, j, &mut rng);
+                                // trace the ray and accumulate color
+                                pixel_color += self.ray_color(r, self.max_depth, world, &mut rng);
+                            }
+
+                            let color = self.pixel_samples_scale * pixel_color;
+
+                            // Publish the finished pixel to the live preview buffer
+                            frame_buffer.write_pixel(i, j, color);
+
+                            progress_bar.inc(1);
                         }
 
-                        // Re-copy tile buffer to "paint over" the marks
-                        for (i, color) in tile_buffer.iter().enumerate() {
-                            let x = tile.x + i as u32 % tile.width;
-                            let y = tile.y + i as u32 / tile.width;
-
-                            framebuffer.write_pixel(x, y, u32_to_color(*color));
-                        }
+                        tile_manager.finish_tile(&tile);
 
                         // Tile finished: bump the counter and log remaining work.
                         // fetch_add returns the value *before* incrementing, so add 1.
                         let done = tiles_count_done.fetch_add(1, Ordering::Relaxed) + 1;
-                        progress_bar.println(&format!("Tile #{:03} done, remaining: {}", tile.index+1, framebuffer.tiles_count_total - done));
+                        progress_bar.println(&format!("Tile #{:03} done, remaining: {}", tile.index+1, tile_manager.tiles_count_total - done));
                     });
 
                 // If the preview window was closed mid-render, drop the partial
@@ -341,7 +311,7 @@ impl Camera {
                 writeln!(writer, "255").expect("Failed to write header");
 
                 // Then write data incrementally in a for loop
-                for color_u32 in framebuffer.get_pixels() {
+                for color_u32 in frame_buffer.get_pixels() {
                     let color = u32_to_color(color_u32);
                     write_color(&mut writer, color);
                 }
@@ -376,9 +346,13 @@ impl Camera {
                 // Snapshot the shared framebuffer into the window buffer while the
                 // render is still running (throttled), and once more when it finishes.
                 if !finished_shown && (last_snapshot.elapsed() >= snapshot_interval || done) {
-                    for (dst, src) in buffer.iter_mut().zip(framebuffer.get_pixels()) {
+                    for (dst, src) in buffer.iter_mut().zip(frame_buffer.get_pixels()) {
                         *dst = src;
                     }
+
+                    // Mark currently rendered tiles
+                    tile_manager.render_current_tiles_borders(&mut buffer);
+
                     last_snapshot = Instant::now();
 
                     if done {
