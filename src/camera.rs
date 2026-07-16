@@ -224,6 +224,8 @@ impl Camera {
         // atomics are enough to publish progress to the window loop.
         let framebuffer: Vec<AtomicU32> = (0..width * height).map(|_| AtomicU32::new(0)).collect();
         let render_done = AtomicBool::new(false);
+        // Set when the preview window is closed so the render can bail out early.
+        let cancelled = AtomicBool::new(false);
 
         std::thread::scope(|scope| {
             // Do the actual rendering (and file writing) on a background thread
@@ -267,6 +269,11 @@ impl Camera {
                         };
 
                         let row: Vec<Color> = (0..self.image_width).map(|i| {
+                            // Bail out fast on every remaining pixel once cancelled.
+                            if cancelled.load(Ordering::Relaxed) {
+                                return Color::zero();
+                            }
+
                             let mut pixel_color = Color::zero();
 
                             for _sample in 0..self.samples_per_pixel {
@@ -293,6 +300,13 @@ impl Camera {
                         row
                     })
                     .collect();
+
+                // If the preview window was closed mid-render, drop the partial
+                // result instead of writing an incomplete image to disk.
+                if cancelled.load(Ordering::Relaxed) {
+                    progress_bar.abandon_with_message(format!("Render cancelled after {:.2?}", start.elapsed()));
+                    return;
+                }
 
                 // Then write data incrementally in a for loop
                 for color in &pixels {
@@ -333,6 +347,10 @@ impl Camera {
                     finished_shown = true;
                 }
             }
+
+            // Window closed: signal the render thread to stop. The scope then
+            // joins the background thread before returning.
+            cancelled.store(true, Ordering::Relaxed);
         });
     }
 
