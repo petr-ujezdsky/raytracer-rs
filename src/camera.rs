@@ -1,19 +1,19 @@
-use rayon::iter::ParallelIterator;
 use crate::color::{color_to_u32, u32_to_color, write_color, Color};
+use crate::frame_buffer::FrameBuffer;
 use crate::hittable::Hittable;
 use crate::interval::Interval;
+use crate::random::Random;
 use crate::ray::Ray;
 use crate::utils;
 use crate::vec3::{Point3, Vec3};
+use indicatif::{ProgressBar, ProgressStyle};
+use minifb::{Key, Window, WindowOptions};
+use rayon::iter::ParallelIterator;
 use std::cmp::max;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Instant;
-use indicatif::{ProgressBar, ProgressStyle};
-use minifb::{Key, Window, WindowOptions};
-use rayon::iter::IntoParallelIterator;
-use crate::random::Random;
 
 /// Config struct for [`Camera`](Camera) that enables usage of default parameters
 #[derive(Debug)]
@@ -222,13 +222,7 @@ impl Camera {
         // Shared framebuffer for the live preview. Each pixel holds a packed
         // 0x00RRGGBB value and is written by exactly one thread, so relaxed
         // atomics are enough to publish progress to the window loop.
-        let framebuffer: Vec<AtomicU32> = (0..width * height).map(|_| AtomicU32::new(0)).collect();
-
-        // Helper function to store pixel
-        let store_color = |x: u32, y: u32, color: u32| {
-            let idx = y as usize * width + x as usize;
-            framebuffer[idx].store(color, Ordering::Relaxed);
-        };
+        let mut framebuffer = FrameBuffer::new(width, height);
 
         let render_done = AtomicBool::new(false);
         // Set when the preview window is closed so the render can bail out early.
@@ -251,55 +245,12 @@ impl Camera {
                         .progress_chars("#>-"),
                 );
 
-                let tile_width = 50;
-                let tile_height = 50;
-
-                // let tile_width = self.image_width / 4;
-                // let tile_height = self.image_height / 4;
-
-                // let tile_width = self.image_width;
-                // let tile_height = 1;
-
-                // let tile_width = 1;
-                // let tile_height = 1;
-
-                struct Tile {
-                    pub index: u32,
-                    pub x: u32,
-                    pub y: u32,
-                    pub width: u32,
-                    pub height: u32,
-                }
-
-                let tiles_count_vertical = (self.image_height as f64 / tile_height as f64).ceil() as u32;
-                let tiles_count_horizontal = (self.image_width as f64 / tile_width as f64).ceil() as u32;
-                let tiles_count_total = tiles_count_vertical * tiles_count_horizontal;
-
                 // Track how many tiles are already finished. tiles complete out of order
                 // across threads, so the counter must be atomic.
                 let tiles_count_done = AtomicU32::new(0);
 
                 // Render the image in parallel
-                (0..tiles_count_total)
-                    .into_par_iter()
-                    .map(|tile_index| {
-                        let i = tile_index % tiles_count_horizontal;
-                        let j = tile_index / tiles_count_horizontal;
-
-                        let x = i * tile_width;
-                        let y = j * tile_height;
-
-                        let width = u32::min(tile_width, self.image_width - x);
-                        let height = u32::min(tile_height, self.image_height - y);
-
-                        Tile {
-                            index: tile_index,
-                            x,
-                            y,
-                            width,
-                            height,
-                        }
-                    })
+                framebuffer.get_tiles()
                     .for_each(|tile| {
                         // Initialize random numbers generator *per thread*
                         let mut rng = match self.rng_seed {
@@ -310,19 +261,19 @@ impl Camera {
                         let mut tile_buffer = vec![0u32; (tile.width * tile.height) as usize];
 
                         // Draw marks - orange rectangle
-                        let mark_color = color_to_u32(Color::new(1.0, 0.65, 0.0));
+                        let mark_color = Color::new(1.0, 0.65, 0.0);
                         let (x0, y0) = (tile.x, tile.y);
                         let (x1, y1) = (tile.x + tile.width - 1, tile.y + tile.height - 1);
 
                         // horizontal edges
                         for x in x0..=x1 {
-                            store_color(x, y0, mark_color);
-                            store_color(x, y1, mark_color);
+                            framebuffer.write_pixel(x, y0, mark_color);
+                            framebuffer.write_pixel(x, y1, mark_color);
                         }
                         // vertical edges
                         for y in y0..=y1 {
-                            store_color(x0, y, mark_color);
-                            store_color(x1, y, mark_color);
+                            framebuffer.write_pixel(x0, y, mark_color);
+                            framebuffer.write_pixel(x1, y, mark_color);
                         }
 
                         for t_j in 0..tile.height {
@@ -345,16 +296,15 @@ impl Camera {
                                 }
 
                                 let color = self.pixel_samples_scale * pixel_color;
-                                let color_u32 = color_to_u32(color);
 
                                 // Publish the finished pixel to the live preview buffer (do not overwrite marks)
                                 if (i != x0 && i != x1 && j != y0 && j != y1) {
-                                    store_color(i, j, color_u32);
+                                    framebuffer.write_pixel(i, j, color);
                                 }
-                                
+
                                 // Store in local tile buffer
                                 let idx_tile = (t_j * tile.width + t_i) as usize;
-                                tile_buffer[idx_tile] = color_u32;
+                                tile_buffer[idx_tile] = color_to_u32(color);
 
                                 progress_bar.inc(1);
                             }
@@ -365,14 +315,13 @@ impl Camera {
                             let x = tile.x + i as u32 % tile.width;
                             let y = tile.y + i as u32 / tile.width;
 
-                            let idx = y as usize * width + x as usize;
-                            framebuffer[idx].store(*color, Ordering::Relaxed);
+                            framebuffer.write_pixel(x, y, u32_to_color(*color));
                         }
 
                         // Tile finished: bump the counter and log remaining work.
                         // fetch_add returns the value *before* incrementing, so add 1.
                         let done = tiles_count_done.fetch_add(1, Ordering::Relaxed) + 1;
-                        progress_bar.println(&format!("Tile #{:03} done, remaining: {}", tile.index+1, tiles_count_total - done));
+                        progress_bar.println(&format!("Tile #{:03} done, remaining: {}", tile.index+1, framebuffer.tiles_count_total - done));
                     });
 
                 // If the preview window was closed mid-render, drop the partial
@@ -392,8 +341,8 @@ impl Camera {
                 writeln!(writer, "255").expect("Failed to write header");
 
                 // Then write data incrementally in a for loop
-                for color_u32 in framebuffer.iter() {
-                    let color = u32_to_color(color_u32.load(Ordering::Relaxed));
+                for color_u32 in framebuffer.get_pixels() {
+                    let color = u32_to_color(color_u32);
                     write_color(&mut writer, color);
                 }
 
@@ -427,8 +376,8 @@ impl Camera {
                 // Snapshot the shared framebuffer into the window buffer while the
                 // render is still running (throttled), and once more when it finishes.
                 if !finished_shown && (last_snapshot.elapsed() >= snapshot_interval || done) {
-                    for (dst, src) in buffer.iter_mut().zip(framebuffer.iter()) {
-                        *dst = src.load(Ordering::Relaxed);
+                    for (dst, src) in buffer.iter_mut().zip(framebuffer.get_pixels()) {
+                        *dst = src;
                     }
                     last_snapshot = Instant::now();
 
