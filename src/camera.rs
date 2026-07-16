@@ -223,6 +223,13 @@ impl Camera {
         // 0x00RRGGBB value and is written by exactly one thread, so relaxed
         // atomics are enough to publish progress to the window loop.
         let framebuffer: Vec<AtomicU32> = (0..width * height).map(|_| AtomicU32::new(0)).collect();
+
+        // Helper function to store pixel
+        let store_color = |x: u32, y: u32, color: u32| {
+            let idx = y as usize * width + x as usize;
+            framebuffer[idx].store(color, Ordering::Relaxed);
+        };
+
         let render_done = AtomicBool::new(false);
         // Set when the preview window is closed so the render can bail out early.
         let cancelled = AtomicBool::new(false);
@@ -246,6 +253,15 @@ impl Camera {
 
                 let tile_width = 50;
                 let tile_height = 50;
+
+                // let tile_width = self.image_width / 4;
+                // let tile_height = self.image_height / 4;
+
+                // let tile_width = self.image_width;
+                // let tile_height = 1;
+
+                // let tile_width = 1;
+                // let tile_height = 1;
 
                 struct Tile {
                     pub index: u32,
@@ -291,12 +307,34 @@ impl Camera {
                             None => Random::from_os(),
                         };
 
-                        for j in tile.y..tile.y+tile.height {
-                            for i in tile.x..tile.x+tile.width {
+                        let mut tile_buffer = vec![0u32; (tile.width * tile.height) as usize];
+
+                        // Draw marks - orange rectangle
+                        let mark_color = color_to_u32(Color::new(1.0, 0.65, 0.0));
+                        let (x0, y0) = (tile.x, tile.y);
+                        let (x1, y1) = (tile.x + tile.width - 1, tile.y + tile.height - 1);
+
+                        // horizontal edges
+                        for x in x0..=x1 {
+                            store_color(x, y0, mark_color);
+                            store_color(x, y1, mark_color);
+                        }
+                        // vertical edges
+                        for y in y0..=y1 {
+                            store_color(x0, y, mark_color);
+                            store_color(x1, y, mark_color);
+                        }
+
+                        for t_j in 0..tile.height {
+                            for t_i in 0..tile.width {
                                 // Bail out fast on every remaining pixel once cancelled.
                                 if cancelled.load(Ordering::Relaxed) {
                                     return;
                                 }
+
+                                // Global coordinates
+                                let i = tile.x + t_i;
+                                let j = tile.y + t_j;
 
                                 let mut pixel_color = Color::zero();
 
@@ -307,13 +345,28 @@ impl Camera {
                                 }
 
                                 let color = self.pixel_samples_scale * pixel_color;
+                                let color_u32 = color_to_u32(color);
 
-                                // Publish the finished pixel to the live preview buffer
-                                let idx = j as usize * width + i as usize;
-                                framebuffer[idx].store(color_to_u32(color), Ordering::Relaxed);
+                                // Publish the finished pixel to the live preview buffer (do not overwrite marks)
+                                if (i != x0 && i != x1 && j != y0 && j != y1) {
+                                    store_color(i, j, color_u32);
+                                }
+                                
+                                // Store in local tile buffer
+                                let idx_tile = (t_j * tile.width + t_i) as usize;
+                                tile_buffer[idx_tile] = color_u32;
 
                                 progress_bar.inc(1);
                             }
+                        }
+
+                        // Re-copy tile buffer to "paint over" the marks
+                        for (i, color) in tile_buffer.iter().enumerate() {
+                            let x = tile.x + i as u32 % tile.width;
+                            let y = tile.y + i as u32 / tile.width;
+
+                            let idx = y as usize * width + x as usize;
+                            framebuffer[idx].store(*color, Ordering::Relaxed);
                         }
 
                         // Tile finished: bump the counter and log remaining work.
