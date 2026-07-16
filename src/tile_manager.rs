@@ -1,6 +1,6 @@
 use crate::color::{color_to_u32, Color};
 use crate::frame_buffer::FrameBuffer;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
@@ -38,7 +38,7 @@ impl TileManager {
         }
     }
 
-    pub fn get_tiles_par_iter(&self) -> impl ParallelIterator<Item = Tile> {
+    pub fn get_tiles_semi_random_par_iter(&self) -> impl ParallelIterator<Item = Tile> {
         // Render the image in parallel
         (0..self.tiles_count_total)
             .into_par_iter()
@@ -48,6 +48,36 @@ impl TileManager {
     pub fn get_tiles_iter(&self) -> impl Iterator<Item = Tile> {
         (0..self.tiles_count_total)
             .map(|tile_index| self.create_tile(tile_index))
+    }
+
+    pub fn get_tiles_par_iter(&self) -> impl ParallelIterator<Item = Tile> {
+        self.get_tiles_iter().par_bridge()
+    }
+
+    pub fn get_tiles_from_center_iter(&self) -> impl ParallelIterator<Item = Tile> {
+        let mut indices: Vec<u32> = (0..self.tiles_count_total).collect();
+
+        let center_x = self.frame_width / 2;
+        let center_y = self.frame_height / 2;
+
+        let center_distance_sq = |index| {
+            let tile = self.create_tile(index);
+
+            let tile_center_x = tile.x + tile.width / 2;
+            let tile_center_y = tile.y + tile.height / 2;
+
+            let dx = tile_center_x - center_x;
+            let dy = tile_center_y - center_y;
+
+            dx * dx + dy * dy
+        };
+
+        // Sort indices by distance from the image center
+        indices.sort_by_key(|tile_index| center_distance_sq(*tile_index));
+
+        indices.into_iter()
+            .map(|tile_index| self.create_tile(tile_index))
+            .par_bridge()
     }
 
     fn create_tile(&self, tile_index: u32) -> Tile {

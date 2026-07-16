@@ -9,7 +9,7 @@ use crate::utils;
 use crate::vec3::{Point3, Vec3};
 use indicatif::{ProgressBar, ProgressStyle};
 use minifb::{Key, Window, WindowOptions};
-use rayon::iter::{ParallelBridge, ParallelIterator};
+use rayon::iter::ParallelIterator;
 use std::cmp::max;
 use std::fs::File;
 use std::io::{BufWriter, Write};
@@ -255,8 +255,9 @@ impl Camera {
 
                 // Render the image in parallel
                 tile_manager
-                    .get_tiles_iter().par_bridge()
                     // .get_tiles_par_iter()
+                    .get_tiles_from_center_iter()
+                    // .get_tiles_semi_random_par_iter()
                     .for_each(|tile| {
                         // Initialize random numbers generator *per thread*
                         let mut rng = match self.rng_seed {
