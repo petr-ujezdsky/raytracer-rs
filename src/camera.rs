@@ -227,8 +227,6 @@ impl Camera {
         writeln!(writer, "{} {}", self.image_width, self.image_height).expect("Failed to write header");
         writeln!(writer, "255").expect("Failed to write header");
 
-        let image_width_half = self.image_width / 2;
-
         // Track how many scanlines are already finished. Rows complete out of order
         // across threads, so the counter must be atomic.
         let scanlines_done = AtomicU32::new(0);
@@ -259,9 +257,8 @@ impl Camera {
 
                     for _sample in 0..self.samples_per_pixel {
                         let r = self.get_ray(i, j, &mut rng);
-                        let left_half = i < image_width_half;
                         // trace the ray and accumulate color
-                        pixel_color += self.ray_color(r, self.max_depth, world, &mut rng, left_half);
+                        pixel_color += self.ray_color(r, self.max_depth, world, &mut rng);
                     }
 
                     progress_bar.inc(1);
@@ -289,7 +286,7 @@ impl Camera {
         progress_bar.finish_with_message(format!("Done in {:.2?}", start.elapsed()));
     }
 
-    fn ray_color(&self, r: Ray, depth: u32, world: &dyn Hittable, rng: &mut Random, left_half: bool) -> Color {
+    fn ray_color(&self, r: Ray, depth: u32, world: &dyn Hittable, rng: &mut Random) -> Color {
         // If we've exceeded the ray bounce limit, no more light is gathered.
         if depth <= 0 {
             return Color::zero();
@@ -302,7 +299,7 @@ impl Camera {
             let color_from_emission = material.emitted(rec.u, rec.v, rec.p);
 
             if let Some(scatter_record) = material.scatter(r, &rec, rng) {
-                let color_from_scatter = scatter_record.attenuation * self.ray_color(scatter_record.scattered, depth - 1, world, rng, left_half);
+                let color_from_scatter = scatter_record.attenuation * self.ray_color(scatter_record.scattered, depth - 1, world, rng);
 
                 // Scattered -> combine both colors
                 return color_from_emission + color_from_scatter;
