@@ -45,6 +45,11 @@ impl TileManager {
             .map(|tile_index| self.create_tile(tile_index))
     }
 
+    pub fn get_tiles_iter(&self) -> impl Iterator<Item = Tile> {
+        (0..self.tiles_count_total)
+            .map(|tile_index| self.create_tile(tile_index))
+    }
+
     fn create_tile(&self, tile_index: u32) -> Tile {
         let i = tile_index % self.tiles_count_horizontal;
         let j = tile_index / self.tiles_count_horizontal;

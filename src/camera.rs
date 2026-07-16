@@ -9,7 +9,7 @@ use crate::utils;
 use crate::vec3::{Point3, Vec3};
 use indicatif::{ProgressBar, ProgressStyle};
 use minifb::{Key, Window, WindowOptions};
-use rayon::iter::ParallelIterator;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::cmp::max;
 use std::fs::File;
 use std::io::{BufWriter, Write};
@@ -254,7 +254,9 @@ impl Camera {
                 let tiles_count_done = AtomicU32::new(0);
 
                 // Render the image in parallel
-                tile_manager.get_tiles_par_iter()
+                tile_manager
+                    .get_tiles_iter().par_bridge()
+                    // .get_tiles_par_iter()
                     .for_each(|tile| {
                         // Initialize random numbers generator *per thread*
                         let mut rng = match self.rng_seed {
