@@ -1,5 +1,5 @@
 use rayon::iter::ParallelIterator;
-use crate::color::{color_to_u32, write_color, Color};
+use crate::color::{color_to_u32, u32_to_color, write_color, Color};
 use crate::hittable::Hittable;
 use crate::interval::Interval;
 use crate::ray::Ray;
@@ -234,20 +234,6 @@ impl Camera {
                 // Start measuring the total render time.
                 let start = Instant::now();
 
-                // Create (or overwrite) the file and wrap it in a buffer for efficient incremental writing
-                let file = File::create("output.ppm").expect("Failed to create file");
-                let mut writer = BufWriter::new(file);
-
-                // First write the header
-                writeln!(writer, "P3").expect("Failed to write header");
-                writeln!(writer, "{} {}", self.image_width, self.image_height).expect("Failed to write header");
-                writeln!(writer, "255").expect("Failed to write header");
-
-                // Track how many scanlines are already finished. Rows complete out of order
-                // across threads, so the counter must be atomic.
-                let scanlines_done = AtomicU32::new(0);
-                let total = self.image_height;
-
                 // Init progress bar (total pixels count)
                 let progress_bar = ProgressBar::new((self.image_height * self.image_width) as u64);
                 progress_bar.set_style(
@@ -258,48 +244,83 @@ impl Camera {
                         .progress_chars("#>-"),
                 );
 
+                let tile_width = 50;
+                let tile_height = 50;
+
+                struct Tile {
+                    pub index: u32,
+                    pub x: u32,
+                    pub y: u32,
+                    pub width: u32,
+                    pub height: u32,
+                }
+
+                let tiles_count_vertical = (self.image_height as f64 / tile_height as f64).ceil() as u32;
+                let tiles_count_horizontal = (self.image_width as f64 / tile_width as f64).ceil() as u32;
+                let tiles_count_total = tiles_count_vertical * tiles_count_horizontal;
+
+                // Track how many tiles are already finished. tiles complete out of order
+                // across threads, so the counter must be atomic.
+                let tiles_count_done = AtomicU32::new(0);
+
                 // Render the image in parallel
-                let pixels: Vec<Color> = (0..self.image_height)
+                (0..tiles_count_total)
                     .into_par_iter()
-                    .flat_map(|j| {
+                    .map(|tile_index| {
+                        let i = tile_index % tiles_count_horizontal;
+                        let j = tile_index / tiles_count_horizontal;
+
+                        let x = i * tile_width;
+                        let y = j * tile_height;
+
+                        let width = u32::min(tile_width, self.image_width - x);
+                        let height = u32::min(tile_height, self.image_height - y);
+
+                        Tile {
+                            index: tile_index,
+                            x,
+                            y,
+                            width,
+                            height,
+                        }
+                    })
+                    .for_each(|tile| {
                         // Initialize random numbers generator *per thread*
                         let mut rng = match self.rng_seed {
-                            Some(s) => Random::new(j as u64 * s),
+                            Some(s) => Random::new(tile.index as u64 * s),
                             None => Random::from_os(),
                         };
 
-                        let row: Vec<Color> = (0..self.image_width).map(|i| {
-                            // Bail out fast on every remaining pixel once cancelled.
-                            if cancelled.load(Ordering::Relaxed) {
-                                return Color::zero();
+                        for j in tile.y..tile.y+tile.height {
+                            for i in tile.x..tile.x+tile.width {
+                                // Bail out fast on every remaining pixel once cancelled.
+                                if cancelled.load(Ordering::Relaxed) {
+                                    return;
+                                }
+
+                                let mut pixel_color = Color::zero();
+
+                                for _sample in 0..self.samples_per_pixel {
+                                    let r = self.get_ray(i, j, &mut rng);
+                                    // trace the ray and accumulate color
+                                    pixel_color += self.ray_color(r, self.max_depth, world, &mut rng);
+                                }
+
+                                let color = self.pixel_samples_scale * pixel_color;
+
+                                // Publish the finished pixel to the live preview buffer
+                                let idx = j as usize * width + i as usize;
+                                framebuffer[idx].store(color_to_u32(color), Ordering::Relaxed);
+
+                                progress_bar.inc(1);
                             }
+                        }
 
-                            let mut pixel_color = Color::zero();
-
-                            for _sample in 0..self.samples_per_pixel {
-                                let r = self.get_ray(i, j, &mut rng);
-                                // trace the ray and accumulate color
-                                pixel_color += self.ray_color(r, self.max_depth, world, &mut rng);
-                            }
-
-                            let color = self.pixel_samples_scale * pixel_color;
-
-                            // Publish the finished pixel to the live preview buffer
-                            let idx = j as usize * width + i as usize;
-                            framebuffer[idx].store(color_to_u32(color), Ordering::Relaxed);
-
-                            progress_bar.inc(1);
-                            color
-                        }).collect();
-
-                        // Row finished: bump the counter and log remaining work.
+                        // Tile finished: bump the counter and log remaining work.
                         // fetch_add returns the value *before* incrementing, so add 1.
-                        let done = scanlines_done.fetch_add(1, Ordering::Relaxed) + 1;
-                        progress_bar.println(&format!("Scanline #{:03} done, remaining: {}", j, total - done));
-
-                        row
-                    })
-                    .collect();
+                        let done = tiles_count_done.fetch_add(1, Ordering::Relaxed) + 1;
+                        progress_bar.println(&format!("Tile #{:03} done, remaining: {}", tile.index+1, tiles_count_total - done));
+                    });
 
                 // If the preview window was closed mid-render, drop the partial
                 // result instead of writing an incomplete image to disk.
@@ -308,9 +329,19 @@ impl Camera {
                     return;
                 }
 
+                // Create (or overwrite) the file and wrap it in a buffer for efficient incremental writing
+                let file = File::create("output.ppm").expect("Failed to create file");
+                let mut writer = BufWriter::new(file);
+
+                // First write the header
+                writeln!(writer, "P3").expect("Failed to write header");
+                writeln!(writer, "{} {}", self.image_width, self.image_height).expect("Failed to write header");
+                writeln!(writer, "255").expect("Failed to write header");
+
                 // Then write data incrementally in a for loop
-                for color in &pixels {
-                    write_color(&mut writer, *color);
+                for color_u32 in framebuffer.iter() {
+                    let color = u32_to_color(color_u32.load(Ordering::Relaxed));
+                    write_color(&mut writer, color);
                 }
 
                 // Flush the buffer to make sure everything is actually written to disk

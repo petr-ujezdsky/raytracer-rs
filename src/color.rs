@@ -43,3 +43,12 @@ pub fn color_to_u32(pixel_color: Color) -> u32 {
 
     (rbyte << 16) | (gbyte << 8) | bbyte
 }
+
+/// Converts a packed `0x00RRGGBB` value suitable for a `minifb` window buffer back into a `Color`.
+pub fn u32_to_color(pixel_color: u32) -> Color {
+    let r = ((pixel_color >> 16) & 0xFF) as f64 / 255.0;
+    let g = ((pixel_color >> 8) & 0xFF) as f64 / 255.0;
+    let b = (pixel_color & 0xFF) as f64 / 255.0;
+
+    Color::new(r * r, g * g, b * b)
+}
