@@ -1,5 +1,5 @@
 use rayon::iter::ParallelIterator;
-use crate::color::{write_color, Color};
+use crate::color::{color_to_u32, write_color, Color};
 use crate::hittable::Hittable;
 use crate::interval::Interval;
 use crate::ray::Ray;
@@ -8,9 +8,10 @@ use crate::vec3::{Point3, Vec3};
 use std::cmp::max;
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Instant;
 use indicatif::{ProgressBar, ProgressStyle};
+use minifb::{Key, Window, WindowOptions};
 use rayon::iter::IntoParallelIterator;
 use crate::random::Random;
 
@@ -215,75 +216,124 @@ impl Camera {
     }
 
     pub fn render(&self, world: &dyn Hittable) {
-        // Start measuring the total render time.
-        let start = Instant::now();
+        let width = self.image_width as usize;
+        let height = self.image_height as usize;
 
-        // Create (or overwrite) the file and wrap it in a buffer for efficient incremental writing
-        let file = File::create("output.ppm").expect("Failed to create file");
-        let mut writer = BufWriter::new(file);
+        // Shared framebuffer for the live preview. Each pixel holds a packed
+        // 0x00RRGGBB value and is written by exactly one thread, so relaxed
+        // atomics are enough to publish progress to the window loop.
+        let framebuffer: Vec<AtomicU32> = (0..width * height).map(|_| AtomicU32::new(0)).collect();
+        let render_done = AtomicBool::new(false);
 
-        // First write the header
-        writeln!(writer, "P3").expect("Failed to write header");
-        writeln!(writer, "{} {}", self.image_width, self.image_height).expect("Failed to write header");
-        writeln!(writer, "255").expect("Failed to write header");
+        std::thread::scope(|scope| {
+            // Do the actual rendering (and file writing) on a background thread
+            // so the window event loop on the main thread stays responsive.
+            scope.spawn(|| {
+                // Start measuring the total render time.
+                let start = Instant::now();
 
-        // Track how many scanlines are already finished. Rows complete out of order
-        // across threads, so the counter must be atomic.
-        let scanlines_done = AtomicU32::new(0);
-        let total = self.image_height;
+                // Create (or overwrite) the file and wrap it in a buffer for efficient incremental writing
+                let file = File::create("output.ppm").expect("Failed to create file");
+                let mut writer = BufWriter::new(file);
 
-        // Init progress bar (total pixels count)
-        let progress_bar = ProgressBar::new((self.image_height * self.image_width) as u64);
-        progress_bar.set_style(
-            ProgressStyle::with_template(
-                "{spinner:.green} [{bar:30.cyan/blue}] {pos}/{len} ({eta}) {msg}",
-            )
-                .unwrap()
-                .progress_chars("#>-"),
-        );
+                // First write the header
+                writeln!(writer, "P3").expect("Failed to write header");
+                writeln!(writer, "{} {}", self.image_width, self.image_height).expect("Failed to write header");
+                writeln!(writer, "255").expect("Failed to write header");
 
-        // Render the image in parallel
-        let pixels: Vec<Color> = (0..self.image_height)
-            .into_par_iter()
-            .flat_map(|j| {
-                // Initialize random numbers generator *per thread*
-                let mut rng = match self.rng_seed {
-                    Some(s) => Random::new(j as u64 * s),
-                    None => Random::from_os(),
-                };
+                // Track how many scanlines are already finished. Rows complete out of order
+                // across threads, so the counter must be atomic.
+                let scanlines_done = AtomicU32::new(0);
+                let total = self.image_height;
 
-                let row: Vec<Color> = (0..self.image_width).map(|i| {
-                    let mut pixel_color = Color::zero();
+                // Init progress bar (total pixels count)
+                let progress_bar = ProgressBar::new((self.image_height * self.image_width) as u64);
+                progress_bar.set_style(
+                    ProgressStyle::with_template(
+                        "{spinner:.green} [{bar:30.cyan/blue}] {pos}/{len} ({eta}) {msg}",
+                    )
+                        .unwrap()
+                        .progress_chars("#>-"),
+                );
 
-                    for _sample in 0..self.samples_per_pixel {
-                        let r = self.get_ray(i, j, &mut rng);
-                        // trace the ray and accumulate color
-                        pixel_color += self.ray_color(r, self.max_depth, world, &mut rng);
-                    }
+                // Render the image in parallel
+                let pixels: Vec<Color> = (0..self.image_height)
+                    .into_par_iter()
+                    .flat_map(|j| {
+                        // Initialize random numbers generator *per thread*
+                        let mut rng = match self.rng_seed {
+                            Some(s) => Random::new(j as u64 * s),
+                            None => Random::from_os(),
+                        };
 
-                    progress_bar.inc(1);
-                    self.pixel_samples_scale * pixel_color
-                }).collect();
+                        let row: Vec<Color> = (0..self.image_width).map(|i| {
+                            let mut pixel_color = Color::zero();
 
-                // Row finished: bump the counter and log remaining work.
-                // fetch_add returns the value *before* incrementing, so add 1.
-                let done = scanlines_done.fetch_add(1, Ordering::Relaxed) + 1;
-                progress_bar.println(&format!("Scanline #{:03} done, remaining: {}", j, total - done));
+                            for _sample in 0..self.samples_per_pixel {
+                                let r = self.get_ray(i, j, &mut rng);
+                                // trace the ray and accumulate color
+                                pixel_color += self.ray_color(r, self.max_depth, world, &mut rng);
+                            }
 
-                row
-            })
-            .collect();
+                            let color = self.pixel_samples_scale * pixel_color;
 
-        // Then write data incrementally in a for loop
-        for color in &pixels {
-            write_color(&mut writer, *color);
-        }
+                            // Publish the finished pixel to the live preview buffer
+                            let idx = j as usize * width + i as usize;
+                            framebuffer[idx].store(color_to_u32(color), Ordering::Relaxed);
 
-        // Flush the buffer to make sure everything is actually written to disk
-        writer.flush().expect("Failed to flush buffer");
+                            progress_bar.inc(1);
+                            color
+                        }).collect();
 
-        // log elapsed time - "?" (debug) is in dynamic units (1.23s, 350.00ms, 12.50µs)
-        progress_bar.finish_with_message(format!("Done in {:.2?}", start.elapsed()));
+                        // Row finished: bump the counter and log remaining work.
+                        // fetch_add returns the value *before* incrementing, so add 1.
+                        let done = scanlines_done.fetch_add(1, Ordering::Relaxed) + 1;
+                        progress_bar.println(&format!("Scanline #{:03} done, remaining: {}", j, total - done));
+
+                        row
+                    })
+                    .collect();
+
+                // Then write data incrementally in a for loop
+                for color in &pixels {
+                    write_color(&mut writer, *color);
+                }
+
+                // Flush the buffer to make sure everything is actually written to disk
+                writer.flush().expect("Failed to flush buffer");
+
+                // log elapsed time - "?" (debug) is in dynamic units (1.23s, 350.00ms, 12.50µs)
+                progress_bar.finish_with_message(format!("Done in {:.2?}", start.elapsed()));
+
+                render_done.store(true, Ordering::Relaxed);
+            });
+
+            // Live preview window on the main thread (required on macOS).
+            let mut window = Window::new(
+                "raytracer-rs — rendering (Esc to close)",
+                width,
+                height,
+                WindowOptions::default(),
+            ).expect("Failed to open preview window");
+
+            // Cap redraws so the loop doesn't busy-spin.
+            window.set_target_fps(30);
+
+            let mut buffer = vec![0u32; width * height];
+            let mut finished_shown = false;
+            while window.is_open() && !window.is_key_down(Key::Escape) {
+                // Snapshot the shared framebuffer into the window's buffer
+                for (dst, src) in buffer.iter_mut().zip(framebuffer.iter()) {
+                    *dst = src.load(Ordering::Relaxed);
+                }
+                window.update_with_buffer(&buffer, width, height).expect("Failed to update window");
+
+                if !finished_shown && render_done.load(Ordering::Relaxed) {
+                    window.set_title("raytracer-rs — done (Esc to close)");
+                    finished_shown = true;
+                }
+            }
+        });
     }
 
     fn ray_color(&self, r: Ray, depth: u32, world: &dyn Hittable, rng: &mut Random) -> Color {

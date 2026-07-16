@@ -29,3 +29,17 @@ pub fn write_color<W: Write>(writer: &mut W, pixel_color: Color) {
 
     writeln!(writer, "{} {} {}", rbyte, gbyte, bbyte).expect("Failed to write color");
 }
+
+/// Converts a color into a packed `0x00RRGGBB` value suitable for a `minifb` window buffer.
+pub fn color_to_u32(pixel_color: Color) -> u32 {
+    let r = linear_to_gamma(pixel_color.x);
+    let g = linear_to_gamma(pixel_color.y);
+    let b = linear_to_gamma(pixel_color.z);
+
+    const INTENSITY: Interval = Interval::new(0.0, 0.999);
+    let rbyte = (256.0 * INTENSITY.clamp(r)) as u32;
+    let gbyte = (256.0 * INTENSITY.clamp(g)) as u32;
+    let bbyte = (256.0 * INTENSITY.clamp(b)) as u32;
+
+    (rbyte << 16) | (gbyte << 8) | bbyte
+}
