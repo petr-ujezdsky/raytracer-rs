@@ -31,6 +31,8 @@ mod texture;
 mod perlin;
 mod quad;
 mod constant_medium;
+mod frame_buffer;
+mod tile_manager;
 
 fn main() {
     match 9 {
