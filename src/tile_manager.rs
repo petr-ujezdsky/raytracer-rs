@@ -66,8 +66,8 @@ impl TileManager {
             let tile_center_x = tile.x + tile.width / 2;
             let tile_center_y = tile.y + tile.height / 2;
 
-            let dx = tile_center_x - center_x;
-            let dy = tile_center_y - center_y;
+            let dx = tile_center_x as i32 - center_x as i32;
+            let dy = tile_center_y as i32 - center_y as i32;
 
             dx * dx + dy * dy
         };
