@@ -405,7 +405,11 @@ impl Camera {
             let color_from_emission = material.emitted(rec.u, rec.v, rec.p);
 
             if let Some(scatter_record) = material.scatter(r, &rec, rng) {
-                let color_from_scatter = scatter_record.attenuation * self.ray_color(scatter_record.scattered, depth - 1, world, rng);
+                let scattering_pdf = rec.mat_ptr.scattering_pdf(r, &rec, scatter_record.scattered, rng);
+                // let pdf_value = 1.0 / (2.0 * utils::PI);
+                let pdf_value = scattering_pdf;
+
+                let color_from_scatter = scatter_record.attenuation * scattering_pdf * self.ray_color(scatter_record.scattered, depth - 1, world, rng) / pdf_value;
 
                 // Scattered -> combine both colors
                 return color_from_emission + color_from_scatter;

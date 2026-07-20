@@ -4,6 +4,7 @@ use crate::hittable::HitRecord;
 use crate::random::Random;
 use crate::ray::Ray;
 use crate::texture::{SolidColor, Texture};
+use crate::utils;
 use crate::vec3::Vec3;
 
 pub struct ScatterRecord {
@@ -17,6 +18,10 @@ pub trait Material: Send + Sync {
 
     fn emitted(&self, _u: f64, _v: f64, _p: Vec3) -> Color {
         Color::zero()
+    }
+
+    fn scattering_pdf(&self, _r_in: Ray, _rec: &HitRecord<'_>, _scattered: Ray, _rng: &mut Random) -> f64 {
+        0.0
     }
 }
 
@@ -37,7 +42,7 @@ impl Lambertian {
 
 impl Material for Lambertian {
     fn scatter(&self, r_in: Ray, rec: &HitRecord<'_>, rng: &mut Random) -> Option<ScatterRecord> {
-        let mut scatter_direction = rec.normal + Vec3::random_unit_vector(rng);
+        let mut scatter_direction = Vec3::random_on_hemisphere(rng, rec.normal);
 
         // Catch degenerate scatter direction
         if scatter_direction.near_zero() {
@@ -48,6 +53,20 @@ impl Material for Lambertian {
             attenuation: self.tex.value(rec.u, rec.v, &rec.p),
             scattered: Ray::new(rec.p, scatter_direction, r_in.time),
         })
+    }
+
+    // fn scattering_pdf(&self, _r_in: Ray, rec: &HitRecord<'_>, scattered: Ray, _rng: &mut Random) -> f64 {
+    //     let cos_theta = Vec3::dot(rec.normal, scattered.direction.unit_vector());
+    //
+    //     if cos_theta < 0.0 {
+    //         0.0
+    //     } else {
+    //         cos_theta / utils::PI
+    //     }
+    // }
+
+    fn scattering_pdf(&self, _r_in: Ray, _rec: &HitRecord<'_>, _scattered: Ray, _rng: &mut Random) -> f64 {
+        1.0 / (2.0 * utils::PI)
     }
 }
 
