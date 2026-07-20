@@ -1,5 +1,6 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Range, Sub, SubAssign};
 use crate::random::Random;
+use crate::utils;
 
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Vec3 {
@@ -164,6 +165,20 @@ impl Vec3 {
 
         // In the same hemisphere as the normal
         if on_unit_sphere.dot(normal) > 0.0 { on_unit_sphere } else { -on_unit_sphere }
+    }
+
+    pub fn random_cosine_direction(rng: &mut Random) -> Vec3 {
+        let r1 = rng.f64();
+        let r2 = rng.f64();
+
+        let phi = 2.0 * utils::PI * r1;
+        let sqrt_r2 = r2.sqrt();
+
+        let x = f64::cos(phi) * sqrt_r2;
+        let y = f64::sin(phi) * sqrt_r2;
+        let z = f64::sqrt(1.0 - r2);
+
+        Vec3::new(x, y, z)
     }
 
     pub fn reflect(v: Vec3, n: Vec3) -> Vec3 {
