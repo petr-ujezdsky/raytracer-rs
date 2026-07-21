@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use crate::color::Color;
 use crate::hittable::HitRecord;
+use crate::onb::Onb;
 use crate::random::Random;
 use crate::ray::Ray;
 use crate::texture::{SolidColor, Texture};
@@ -10,6 +11,7 @@ use crate::vec3::Vec3;
 pub struct ScatterRecord {
     pub attenuation: Color,
     pub scattered: Ray,
+    pub pdf: f64,
 }
 
 /// Surface material.
@@ -42,16 +44,13 @@ impl Lambertian {
 
 impl Material for Lambertian {
     fn scatter(&self, r_in: Ray, rec: &HitRecord<'_>, rng: &mut Random) -> Option<ScatterRecord> {
-        let mut scatter_direction = Vec3::random_on_hemisphere(rng, rec.normal);
-
-        // Catch degenerate scatter direction
-        if scatter_direction.near_zero() {
-            scatter_direction = rec.normal;
-        }
+        let uvw = Onb::new(rec.normal);
+        let scatter_direction = uvw.transform(Vec3::random_cosine_direction(rng)).unit_vector();
 
         Some(ScatterRecord {
             attenuation: self.tex.value(rec.u, rec.v, &rec.p),
             scattered: Ray::new(rec.p, scatter_direction, r_in.time),
+            pdf: Vec3::dot(uvw.w, scatter_direction) / utils::PI,
         })
     }
 
@@ -96,6 +95,7 @@ impl Material for Metal {
         Some(ScatterRecord {
             attenuation: self.albedo,
             scattered,
+            pdf: 0.0,
         })
     }
 }
@@ -141,6 +141,7 @@ impl Material for Dielectric {
         Some(ScatterRecord {
             attenuation,
             scattered,
+            pdf: 0.0,
         })
     }
 }
@@ -191,6 +192,11 @@ impl Material for Isotropic {
         Some(ScatterRecord {
             attenuation,
             scattered,
+            pdf: 1.0 / (4.0 * utils::PI),
         })
+    }
+
+    fn scattering_pdf(&self, _r_in: Ray, _rec: &HitRecord<'_>, _scattered: Ray, _rng: &mut Random) -> f64 {
+        1.0 / (4.0 * utils::PI)
     }
 }
