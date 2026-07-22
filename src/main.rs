@@ -34,6 +34,7 @@ mod constant_medium;
 mod frame_buffer;
 mod tile_manager;
 mod onb;
+mod pdf;
 
 fn main() {
     match 7 {

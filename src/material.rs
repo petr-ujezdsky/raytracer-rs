@@ -18,7 +18,7 @@ pub struct ScatterRecord {
 pub trait Material: Send + Sync {
     fn scatter(&self, r_in: Ray, rec: &HitRecord<'_>, rng: &mut Random) -> Option<ScatterRecord>;
 
-    fn emitted(&self, _u: f64, _v: f64, _p: Vec3) -> Color {
+    fn emitted(&self, _r_in: Ray, _rec: &HitRecord<'_>, _u: f64, _v: f64, _p: Vec3) -> Color {
         Color::zero()
     }
 
@@ -165,8 +165,12 @@ impl Material for DiffuseLight {
         None
     }
 
-    fn emitted(&self, u: f64, v: f64, p: Vec3) -> Color {
-        self.tex.value(u, v, &p)
+    fn emitted(&self, _r_in: Ray, rec: &HitRecord<'_>, _u: f64, _v: f64, _p: Vec3) -> Color {
+        if !rec.front_face {
+            return Color::zero();
+        }
+
+        self.tex.value(_u, _v, &_p)
     }
 }
 

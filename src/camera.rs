@@ -16,6 +16,7 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Instant;
+use crate::pdf::{CosinePdf, Pdf};
 
 /// Config struct for [`Camera`](Camera) that enables usage of default parameters
 #[derive(Debug)]
@@ -448,14 +449,16 @@ impl Camera {
         if let Some(rec) = world.hit(r, Interval::new(0.001, utils::INFINITY), rng) {
             // Use material
             let material = rec.mat_ptr;
-            let color_from_emission = material.emitted(rec.u, rec.v, rec.p);
+            let color_from_emission = material.emitted(r, &rec, rec.u, rec.v, rec.p);
 
             if let Some(scatter_record) = material.scatter(r, &rec, rng) {
-                let scattering_pdf = rec.mat_ptr.scattering_pdf(r, &rec, scatter_record.scattered, rng);
-                // let pdf_value = 1.0 / (2.0 * utils::PI);
-                let pdf_value = scatter_record.pdf;
+                let surface_pdf = CosinePdf::new(rec.normal);
+                let scattered = Ray::new(rec.p, surface_pdf.generate(rng), r.time);
+                let pdf_value = surface_pdf.value(scattered.direction, rng);
 
-                let color_from_scatter = scatter_record.attenuation * scattering_pdf * self.ray_color(scatter_record.scattered, depth - 1, world, rng) / pdf_value;
+                let scattering_pdf = rec.mat_ptr.scattering_pdf(r, &rec, scattered, rng);
+
+                let color_from_scatter = scatter_record.attenuation * scattering_pdf * self.ray_color(scattered, depth - 1, world, rng) / pdf_value;
 
                 // Scattered -> combine both colors
                 return color_from_emission + color_from_scatter;
