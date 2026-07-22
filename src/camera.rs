@@ -8,6 +8,7 @@ use crate::tile_manager::TileManager;
 use crate::utils;
 use crate::vec3::{Point3, Vec3};
 use indicatif::{ProgressBar, ProgressStyle};
+#[cfg(feature = "preview")]
 use minifb::{Key, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
 use std::cmp::max;
@@ -240,156 +241,201 @@ impl Camera {
         // Manager for tiling the image and tracking which tiles are currently being rendered.
         let tile_manager = TileManager::new(50, 50, &frame_buffer);
 
-        let render_done = AtomicBool::new(false);
         // Set when the preview window is closed so the render can bail out early.
         let cancelled = AtomicBool::new(false);
 
-        std::thread::scope(|scope| {
-            // Do the actual rendering (and file writing) on a background thread
-            // so the window event loop on the main thread stays responsive.
-            scope.spawn(|| {
-                // Start measuring the total render time.
-                let start = Instant::now();
+        // With the live preview enabled, run the render on a background thread so
+        // the window event loop can own the main thread (required on macOS).
+        #[cfg(feature = "preview")]
+        {
+            let render_done = AtomicBool::new(false);
 
-                // Init progress bar (total pixels count)
-                let progress_bar = ProgressBar::new((self.image_height * self.image_width) as u64);
-                progress_bar.set_style(
-                    ProgressStyle::with_template(
-                        "{spinner:.green} [{bar:30.cyan/blue}] {pos}/{len} ({eta}) {msg}",
-                    )
-                        .unwrap()
-                        .progress_chars("#>-"),
-                );
+            std::thread::scope(|scope| {
+                scope.spawn(|| {
+                    if self.render_frame_buffer(world, &frame_buffer, &tile_manager, &cancelled) {
+                        self.write_output(&frame_buffer);
+                    }
+                    render_done.store(true, Ordering::Relaxed);
+                });
 
-                // Track how many tiles are already finished. tiles complete out of order
-                // across threads, so the counter must be atomic.
-                let tiles_count_done = AtomicU32::new(0);
+                self.run_preview_window(width, height, &frame_buffer, &tile_manager, &render_done, &cancelled);
+            });
+        }
 
-                // Render the image in parallel
-                tile_manager
-                    // .get_tiles_par_iter()
-                    .get_tiles_from_center_iter()
-                    // .get_tiles_semi_random_par_iter()
-                    .for_each(|tile| {
-                        // Initialize random numbers generator *per thread*
-                        let mut rng = match self.rng_seed {
-                            Some(s) => Random::new(tile.index as u64 * s),
-                            None => Random::from_os(),
-                        };
+        // Headless build: render synchronously on the current thread, no window.
+        #[cfg(not(feature = "preview"))]
+        {
+            if self.render_frame_buffer(world, &frame_buffer, &tile_manager, &cancelled) {
+                self.write_output(&frame_buffer);
+            }
+        }
+    }
 
-                        tile_manager.start_tile(&tile);
+    /// Renders the whole image into `frame_buffer` in parallel.
+    ///
+    /// Returns `true` if the render completed, or `false` if it was cancelled
+    /// (via the preview window) before finishing.
+    fn render_frame_buffer(
+        &self,
+        world: &dyn Hittable,
+        frame_buffer: &FrameBuffer,
+        tile_manager: &TileManager,
+        cancelled: &AtomicBool,
+    ) -> bool {
+        // Start measuring the total render time.
+        let start = Instant::now();
 
-                        for (i, j) in tile.pixels_iter() {
-                            // Bail out fast on every remaining pixel once cancelled.
-                            if cancelled.load(Ordering::Relaxed) {
-                                return;
-                            }
+        // Init progress bar (total pixels count)
+        let progress_bar = ProgressBar::new((self.image_height * self.image_width) as u64);
+        progress_bar.set_style(
+            ProgressStyle::with_template(
+                "{spinner:.green} [{bar:30.cyan/blue}] {pos}/{len} ({eta}) {msg}",
+            )
+                .unwrap()
+                .progress_chars("#>-"),
+        );
 
-                            let mut pixel_color = Color::zero();
+        // Track how many tiles are already finished. tiles complete out of order
+        // across threads, so the counter must be atomic.
+        let tiles_count_done = AtomicU32::new(0);
 
-                            for s_j in 0..self.sqrt_spp {
-                                for s_i in 0..self.sqrt_spp {
-                                    let r = self.get_ray(i, j, s_i, s_j, &mut rng);
-                                    // trace the ray and accumulate color
-                                    pixel_color += self.ray_color(r, self.max_depth, world, &mut rng);
-                                }
-                            }
+        // Render the image in parallel
+        tile_manager
+            // .get_tiles_par_iter()
+            .get_tiles_from_center_iter()
+            // .get_tiles_semi_random_par_iter()
+            .for_each(|tile| {
+                // Initialize random numbers generator *per thread*
+                let mut rng = match self.rng_seed {
+                    Some(s) => Random::new(tile.index as u64 * s),
+                    None => Random::from_os(),
+                };
 
-                            let color = self.pixel_samples_scale * pixel_color;
+                tile_manager.start_tile(&tile);
 
-                            // Publish the finished pixel to the live preview buffer
-                            frame_buffer.write_pixel(i, j, color);
+                for (i, j) in tile.pixels_iter() {
+                    // Bail out fast on every remaining pixel once cancelled.
+                    if cancelled.load(Ordering::Relaxed) {
+                        return;
+                    }
 
-                            progress_bar.inc(1);
+                    let mut pixel_color = Color::zero();
+
+                    for s_j in 0..self.sqrt_spp {
+                        for s_i in 0..self.sqrt_spp {
+                            let r = self.get_ray(i, j, s_i, s_j, &mut rng);
+                            // trace the ray and accumulate color
+                            pixel_color += self.ray_color(r, self.max_depth, world, &mut rng);
                         }
+                    }
 
-                        tile_manager.finish_tile(&tile);
+                    let color = self.pixel_samples_scale * pixel_color;
 
-                        // Tile finished: bump the counter and log remaining work.
-                        // fetch_add returns the value *before* incrementing, so add 1.
-                        let done = tiles_count_done.fetch_add(1, Ordering::Relaxed) + 1;
-                        progress_bar.println(&format!("Tile #{:03} done, remaining: {}", tile.index+1, tile_manager.tiles_count_total - done));
-                    });
+                    // Publish the finished pixel to the live preview buffer
+                    frame_buffer.write_pixel(i, j, color);
 
-                // If the preview window was closed mid-render, drop the partial
-                // result instead of writing an incomplete image to disk.
-                if cancelled.load(Ordering::Relaxed) {
-                    progress_bar.abandon_with_message(format!("Render cancelled after {:.2?}", start.elapsed()));
-                    return;
+                    progress_bar.inc(1);
                 }
 
-                // Create (or overwrite) the file and wrap it in a buffer for efficient incremental writing
-                let file = File::create("output.ppm").expect("Failed to create file");
-                let mut writer = BufWriter::new(file);
+                tile_manager.finish_tile(&tile);
 
-                // First write the header
-                writeln!(writer, "P3").expect("Failed to write header");
-                writeln!(writer, "{} {}", self.image_width, self.image_height).expect("Failed to write header");
-                writeln!(writer, "255").expect("Failed to write header");
-
-                // Then write data incrementally in a for loop
-                for color_u32 in frame_buffer.get_pixels() {
-                    let color = u32_to_color(color_u32);
-                    write_color(&mut writer, color);
-                }
-
-                // Flush the buffer to make sure everything is actually written to disk
-                writer.flush().expect("Failed to flush buffer");
-
-                // log elapsed time - "?" (debug) is in dynamic units (1.23s, 350.00ms, 12.50µs)
-                progress_bar.finish_with_message(format!("Done in {:.2?}", start.elapsed()));
-
-                render_done.store(true, Ordering::Relaxed);
+                // Tile finished: bump the counter and log remaining work.
+                // fetch_add returns the value *before* incrementing, so add 1.
+                let done = tiles_count_done.fetch_add(1, Ordering::Relaxed) + 1;
+                progress_bar.println(&format!("Tile #{:03} done, remaining: {}", tile.index+1, tile_manager.tiles_count_total - done));
             });
 
-            // Live preview window on the main thread (required on macOS).
-            let mut window = Window::new(
-                "raytracer-rs — rendering (Esc to close)",
-                width,
-                height,
-                WindowOptions::default(),
-            ).expect("Failed to open preview window");
+        // If the preview window was closed mid-render, drop the partial
+        // result instead of writing an incomplete image to disk.
+        if cancelled.load(Ordering::Relaxed) {
+            progress_bar.abandon_with_message(format!("Render cancelled after {:.2?}", start.elapsed()));
+            return false;
+        }
 
-            let mut buffer = vec![0u32; width * height];
-            let mut finished_shown = false;
-            let mut last_snapshot = Instant::now();
-            // Re-copy the image at ~30 FPS; the window itself is refreshed (and
-            // events pumped) every iteration via update_with_buffer.
-            let snapshot_interval = std::time::Duration::from_millis(33);
+        // log elapsed time - "?" (debug) is in dynamic units (1.23s, 350.00ms, 12.50µs)
+        progress_bar.finish_with_message(format!("Done in {:.2?}", start.elapsed()));
+        true
+    }
 
-            while window.is_open() && !window.is_key_down(Key::Escape) {
-                let done = render_done.load(Ordering::Relaxed);
+    /// Writes the rendered `frame_buffer` to `output.ppm`.
+    fn write_output(&self, frame_buffer: &FrameBuffer) {
+        // Create (or overwrite) the file and wrap it in a buffer for efficient incremental writing
+        let file = File::create("output.ppm").expect("Failed to create file");
+        let mut writer = BufWriter::new(file);
 
-                // Snapshot the shared framebuffer into the window buffer while the
-                // render is still running (throttled), and once more when it finishes.
-                if !finished_shown && (last_snapshot.elapsed() >= snapshot_interval || done) {
-                    for (dst, src) in buffer.iter_mut().zip(frame_buffer.get_pixels()) {
-                        *dst = src;
-                    }
+        // First write the header
+        writeln!(writer, "P3").expect("Failed to write header");
+        writeln!(writer, "{} {}", self.image_width, self.image_height).expect("Failed to write header");
+        writeln!(writer, "255").expect("Failed to write header");
 
-                    // Mark currently rendered tiles
-                    tile_manager.render_current_tiles_borders(&mut buffer);
+        // Then write data incrementally in a for loop
+        for color_u32 in frame_buffer.get_pixels() {
+            let color = u32_to_color(color_u32);
+            write_color(&mut writer, color);
+        }
 
-                    last_snapshot = Instant::now();
+        // Flush the buffer to make sure everything is actually written to disk
+        writer.flush().expect("Failed to flush buffer");
+    }
 
-                    if done {
-                        window.set_title("raytracer-rs — done (Esc to close)");
-                        finished_shown = true;
-                    }
+    /// Live preview window on the main thread (required on macOS). Signals
+    /// `cancelled` once the window is closed so the render thread can stop.
+    #[cfg(feature = "preview")]
+    fn run_preview_window(
+        &self,
+        width: usize,
+        height: usize,
+        frame_buffer: &FrameBuffer,
+        tile_manager: &TileManager,
+        render_done: &AtomicBool,
+        cancelled: &AtomicBool,
+    ) {
+        let mut window = Window::new(
+            "raytracer-rs — rendering (Esc to close)",
+            width,
+            height,
+            WindowOptions::default(),
+        ).expect("Failed to open preview window");
+
+        let mut buffer = vec![0u32; width * height];
+        let mut finished_shown = false;
+        let mut last_snapshot = Instant::now();
+        // Re-copy the image at ~30 FPS; the window itself is refreshed (and
+        // events pumped) every iteration via update_with_buffer.
+        let snapshot_interval = std::time::Duration::from_millis(33);
+
+        while window.is_open() && !window.is_key_down(Key::Escape) {
+            let done = render_done.load(Ordering::Relaxed);
+
+            // Snapshot the shared framebuffer into the window buffer while the
+            // render is still running (throttled), and once more when it finishes.
+            if !finished_shown && (last_snapshot.elapsed() >= snapshot_interval || done) {
+                for (dst, src) in buffer.iter_mut().zip(frame_buffer.get_pixels()) {
+                    *dst = src;
                 }
 
-                // Always drive the window through update_with_buffer only (mixing it
-                // with update() on the same window is not supported by minifb).
-                window.update_with_buffer(&buffer, width, height).expect("Failed to update window");
+                // Mark currently rendered tiles
+                tile_manager.render_current_tiles_borders(&mut buffer);
 
-                // Yield briefly instead of busy-spinning (~250 Hz event pump).
-                std::thread::sleep(std::time::Duration::from_millis(4));
+                last_snapshot = Instant::now();
+
+                if done {
+                    window.set_title("raytracer-rs — done (Esc to close)");
+                    finished_shown = true;
+                }
             }
 
-            // Window closed: signal the render thread to stop. The scope then
-            // joins the background thread before returning.
-            cancelled.store(true, Ordering::Relaxed);
-        });
+            // Always drive the window through update_with_buffer only (mixing it
+            // with update() on the same window is not supported by minifb).
+            window.update_with_buffer(&buffer, width, height).expect("Failed to update window");
+
+            // Yield briefly instead of busy-spinning (~250 Hz event pump).
+            std::thread::sleep(std::time::Duration::from_millis(4));
+        }
+
+        // Window closed: signal the render thread to stop. The scope then
+        // joins the background thread before returning.
+        cancelled.store(true, Ordering::Relaxed);
     }
 
     fn ray_color(&self, r: Ray, depth: u32, world: &dyn Hittable, rng: &mut Random) -> Color {
