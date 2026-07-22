@@ -36,7 +36,7 @@ mod tile_manager;
 mod onb;
 
 fn main() {
-    match 9 {
+    match 7 {
         0 => three_spheres(),
         1 => bouncing_spheres(),
         2 => checkered_spheres(),
@@ -406,7 +406,7 @@ fn cornell_box() {
     let camera = Camera::new(CameraConfig {
         aspect_ratio: 1.0,
         image_width: 600,
-        samples_per_pixel: 200,
+        samples_per_pixel: 1024,
         max_depth: 50,
         background: Color::zero(),
 
