@@ -3,17 +3,25 @@ Raytracer in Rust for educational purposes
 
 ## Prerequisites
 You need to have `cargo` installed. This project requires Rust version 1.85+.
-On debian-based systems you can check the version with:
+
+### MacOS
+On MacOS you can install the Rust toolchain using Homebrew:
+```bash
+brew install rust
+```
+
+### Debian-based systems
+On debian-based systems you can check the available version with:
 ```bash
 apt-cache policy rustc
 ```
 
-If you see version >= 1.85, you can install it from `apt` with:
+If you see version >= 1.85 (typically `Trixie` and newer), you can install it directly from `apt` with:
 ```bash
 sudo apt install -y build-essential cargo rustc
 ```
 
-If you see older version, you can install the latest version of Rust using rustup:
+If you see older version (typically `Bookworm` and older), you can install the latest version of Rust using `rustup`:
 ```bash
 sudo apt install -y build-essential
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
