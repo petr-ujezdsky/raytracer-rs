@@ -47,8 +47,8 @@ fn main() {
         6 => simple_light(400, 100, 50),
         7 => cornell_box(600, 1024, 50),
         8 => cornell_smoke(600, 200, 50),
-        9 => final_scene(800, 1000, 40),
-        99 => final_scene(400, 250, 4),
+        9 => final_scene(400, 250, 4),
+        99 => final_scene(800, 1000, 40),
         _ => panic!("invalid scene number"),
     }
 }
