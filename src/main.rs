@@ -38,22 +38,22 @@ mod pdf;
 
 fn main() {
     match 7 {
-        0 => three_spheres(),
-        1 => bouncing_spheres(),
-        2 => checkered_spheres(),
-        3 => earth(),
-        4 => perlin_spheres(),
-        5 => quads(),
-        6 => simple_light(),
-        7 => cornell_box(),
-        8 => cornell_smoke(),
+        0 => three_spheres(400, 100, 50),
+        1 => bouncing_spheres(1200, 100, 50),
+        2 => checkered_spheres(400, 100, 50),
+        3 => earth(400, 100, 50),
+        4 => perlin_spheres(400, 100, 50),
+        5 => quads(400, 100, 50),
+        6 => simple_light(400, 100, 50),
+        7 => cornell_box(600, 1024, 50),
+        8 => cornell_smoke(600, 200, 50),
         9 => final_scene(800, 1000, 40),
         99 => final_scene(400, 250, 4),
         _ => panic!("invalid scene number"),
     }
 }
 
-fn three_spheres() {
+fn three_spheres(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     // Rng
     // let rng_seed: Option<u64> = None;
     let rng_seed = Some(12487324);
@@ -75,9 +75,9 @@ fn three_spheres() {
 
     // Camera
     let camera = Camera::new(CameraConfig {
-        image_width: 400,
-        samples_per_pixel: 100,
-        max_depth: 50,
+        image_width,
+        samples_per_pixel,
+        max_depth,
         background: Color::new(0.7, 0.8, 1.0),
 
         vfov: 20,
@@ -95,7 +95,7 @@ fn three_spheres() {
     camera.render(&world);
 }
 
-fn bouncing_spheres() {
+fn bouncing_spheres(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     // Rng
     // let rng_seed: Option<u64> = None;
     let rng_seed = Some(12487324);
@@ -152,9 +152,9 @@ fn bouncing_spheres() {
 
     // Camera
     let camera = Camera::new(CameraConfig {
-        image_width: 1200,
-        samples_per_pixel: 100,
-        max_depth: 50,
+        image_width,
+        samples_per_pixel,
+        max_depth,
         background: Color::new(0.7, 0.8, 1.0),
 
         vfov: 20,
@@ -172,7 +172,7 @@ fn bouncing_spheres() {
     camera.render(&world);
 }
 
-fn checkered_spheres() {
+fn checkered_spheres(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     // Rng
     // let rng_seed: Option<u64> = None;
     let rng_seed = Some(12487324);
@@ -191,9 +191,9 @@ fn checkered_spheres() {
 
     // Camera
     let camera = Camera::new(CameraConfig {
-        image_width: 400,
-        samples_per_pixel: 100,
-        max_depth: 50,
+        image_width,
+        samples_per_pixel,
+        max_depth,
         background: Color::new(0.7, 0.8, 1.0),
 
         vfov: 20,
@@ -211,7 +211,7 @@ fn checkered_spheres() {
     camera.render(&world);
 }
 
-fn earth() {
+fn earth(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     // Rng
     // let rng_seed: Option<u64> = None;
     let rng_seed = Some(12487324);
@@ -230,9 +230,9 @@ fn earth() {
 
     // Camera
     let camera = Camera::new(CameraConfig {
-        image_width: 400,
-        samples_per_pixel: 100,
-        max_depth: 50,
+        image_width,
+        samples_per_pixel,
+        max_depth,
         background: Color::new(0.7, 0.8, 1.0),
 
         vfov: 20,
@@ -250,7 +250,7 @@ fn earth() {
     camera.render(&world);
 }
 
-fn perlin_spheres() {
+fn perlin_spheres(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     // Rng
     // let rng_seed: Option<u64> = None;
     let rng_seed = Some(12487324);
@@ -266,9 +266,9 @@ fn perlin_spheres() {
 
     // Camera
     let camera = Camera::new(CameraConfig {
-        image_width: 400,
-        samples_per_pixel: 100,
-        max_depth: 50,
+        image_width,
+        samples_per_pixel,
+        max_depth,
         background: Color::new(0.7, 0.8, 1.0),
 
         vfov: 20,
@@ -286,7 +286,7 @@ fn perlin_spheres() {
     camera.render(&world);
 }
 
-fn quads() {
+fn quads(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     // Rng
     // let rng_seed: Option<u64> = None;
     let rng_seed = Some(12487324);
@@ -310,9 +310,9 @@ fn quads() {
     // Camera
     let camera = Camera::new(CameraConfig {
         aspect_ratio: 1.0,
-        image_width: 400,
-        samples_per_pixel: 100,
-        max_depth: 50,
+        image_width,
+        samples_per_pixel,
+        max_depth,
         background: Color::new(0.7, 0.8, 1.0),
 
         vfov: 80,
@@ -330,7 +330,7 @@ fn quads() {
     camera.render(&world);
 }
 
-fn simple_light() {
+fn simple_light(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     // Rng
     // let rng_seed: Option<u64> = None;
     let rng_seed = Some(12487324);
@@ -350,9 +350,9 @@ fn simple_light() {
 
     // Camera
     let camera = Camera::new(CameraConfig {
-        image_width: 400,
-        samples_per_pixel: 100,
-        max_depth: 50,
+        image_width,
+        samples_per_pixel,
+        max_depth,
         background: Color::zero(),
 
         vfov: 20,
@@ -370,7 +370,7 @@ fn simple_light() {
     camera.render(&world);
 }
 
-fn cornell_box() {
+fn cornell_box(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     // Rng
     // let rng_seed: Option<u64> = None;
     let rng_seed = Some(12487324);
@@ -394,8 +394,8 @@ fn cornell_box() {
 
     // boxes inside the cornell box
     // Box 1
-    let aluminum = Arc::new(Metal::new(Color::new(0.8, 0.85, 0.88), 0.0));
-    let mut box1: Arc<dyn Hittable> = Arc::new(Quad::create_box(Point3::zero(), Point3::new(165.0, 330.0, 165.0), aluminum.clone()));
+    // let aluminum = Arc::new(Metal::new(Color::new(0.8, 0.85, 0.88), 0.0));
+    let mut box1: Arc<dyn Hittable> = Arc::new(Quad::create_box(Point3::zero(), Point3::new(165.0, 330.0, 165.0), white.clone()));
     box1 = Arc::new(RotateY::new(box1, 15.0));
     box1 = Arc::new(Translate::new(box1, Vec3::new(265.0, 0.0, 295.0)));
     world.add_arc(box1);
@@ -413,9 +413,9 @@ fn cornell_box() {
     // Camera
     let camera = Camera::new(CameraConfig {
         aspect_ratio: 1.0,
-        image_width: 600,
-        samples_per_pixel: 1024,
-        max_depth: 50,
+        image_width,
+        samples_per_pixel,
+        max_depth,
         background: Color::zero(),
 
         vfov: 40,
@@ -433,7 +433,7 @@ fn cornell_box() {
     camera.render2(&world, &lights);
 }
 
-fn cornell_smoke() {
+fn cornell_smoke(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     // Rng
     // let rng_seed: Option<u64> = None;
     let rng_seed = Some(12487324);
@@ -471,9 +471,9 @@ fn cornell_smoke() {
     // Camera
     let camera = Camera::new(CameraConfig {
         aspect_ratio: 1.0,
-        image_width: 600,
-        samples_per_pixel: 200,
-        max_depth: 50,
+        image_width,
+        samples_per_pixel,
+        max_depth,
         background: Color::zero(),
 
         vfov: 40,
