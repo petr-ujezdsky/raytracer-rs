@@ -50,7 +50,7 @@ impl Lambertian {
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, r_in: Ray, rec: &HitRecord<'_>, rng: &mut Random) -> Option<ScatterRecord> {
+    fn scatter(&self, _r_in: Ray, rec: &HitRecord<'_>, _rng: &mut Random) -> Option<ScatterRecord> {
         Some(ScatterRecord {
             attenuation: self.tex.value(rec.u, rec.v, &rec.p),
             diffuse_or_specular: Diffuse(Box::new(CosinePdf::new(rec.normal))),
