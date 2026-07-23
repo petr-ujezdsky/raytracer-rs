@@ -345,8 +345,10 @@ fn simple_light(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     world.add(Sphere::new(Point3::new(0.0, 2.0, 0.0), 2.0, Arc::new(Lambertian::new(pertext))));
 
     let difflight = Arc::new(DiffuseLight::from_color(Color::new(4.0, 4.0, 4.0)));
-    world.add(Sphere::new(Point3::new(0.0, 7.0, 0.0), 2.0, difflight.clone()));
-    world.add(Quad::new(Point3::new(3.0, 1.0, -2.0), Vec3::new(2.0, 0.0, 0.0), Vec3::new(0.0, 2.0, 0.0), difflight));
+    let light_sphere = Arc::new(Sphere::new(Point3::new(0.0, 7.0, 0.0), 2.0, difflight.clone()));
+    world.add_arc(light_sphere.clone());
+    let light_quad = Arc::new(Quad::new(Point3::new(3.0, 1.0, -2.0), Vec3::new(2.0, 0.0, 0.0), Vec3::new(0.0, 2.0, 0.0), difflight));
+    world.add_arc(light_quad.clone());
 
     // Camera
     let camera = Camera::new(CameraConfig {
@@ -367,7 +369,7 @@ fn simple_light(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render(&world);
+    camera.render2(&world, light_quad.as_ref());
 }
 
 fn cornell_box(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
@@ -387,7 +389,8 @@ fn cornell_box(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     // cornell sides
     world.add(Quad::new(Point3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 555.0, 0.0), Vec3::new(0.0, 0.0, 555.0), green));
     world.add(Quad::new(Point3::zero(), Vec3::new(0.0, 555.0, 0.0), Vec3::new(0.0, 0.0, 555.0), red));
-    world.add(Quad::new(Point3::new(343.0, 554.0, 332.0), Vec3::new(-130.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -105.0), light.clone()));
+    let quad_light = Arc::new(Quad::new(Point3::new(343.0, 554.0, 332.0), Vec3::new(-130.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -105.0), light.clone()));
+    world.add_arc(quad_light.clone());
     world.add(Quad::new(Point3::zero(), Vec3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 555.0), white.clone()));
     world.add(Quad::new(Point3::new(555.0, 555.0, 555.0), Vec3::new(-555.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -555.0), white.clone()));
     world.add(Quad::new(Point3::new(0.0, 0.0, 555.0), Vec3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 555.0, 0.0), white.clone()));
@@ -405,10 +408,6 @@ fn cornell_box(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     box2 = Arc::new(RotateY::new(box2, -18.0));
     box2 = Arc::new(Translate::new(box2, Vec3::new(130.0, 0.0, 65.0)));
     world.add_arc(box2);
-
-    // Light sources
-    // let empty_material = Arc::new();
-    let lights = Quad::new(Point3::new(343.0, 554.0, 332.0), Vec3::new(-130.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -105.0), light.clone());
 
     // Camera
     let camera = Camera::new(CameraConfig {
@@ -430,7 +429,7 @@ fn cornell_box(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render2(&world, &lights);
+    camera.render2(&world, quad_light.as_ref());
 }
 
 fn cornell_smoke(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
@@ -450,7 +449,8 @@ fn cornell_smoke(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     // cornell sides
     world.add(Quad::new(Point3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 555.0, 0.0), Vec3::new(0.0, 0.0, 555.0), green));
     world.add(Quad::new(Point3::zero(), Vec3::new(0.0, 555.0, 0.0), Vec3::new(0.0, 0.0, 555.0), red));
-    world.add(Quad::new(Point3::new(113.0,554.0,127.0), Vec3::new(330.0,0.0,0.0), Vec3::new(0.0, 0.0, 305.0), light));
+    let light_quad = Arc::new(Quad::new(Point3::new(113.0, 554.0, 127.0), Vec3::new(330.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 305.0), light));
+    world.add_arc(light_quad.clone());
     world.add(Quad::new(Point3::new(0.0, 555.0, 0.0), Vec3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 555.0), white.clone()));
     world.add(Quad::new(Point3::zero(), Vec3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 555.0), white.clone()));
     world.add(Quad::new(Point3::new(0.0, 0.0, 555.0), Vec3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 555.0, 0.0), white.clone()));
@@ -488,7 +488,7 @@ fn cornell_smoke(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render(&world);
+    camera.render2(&world, light_quad.as_ref());
 }
 
 fn final_scene(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
@@ -524,7 +524,8 @@ fn final_scene(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
 
     // Light
     let light = Arc::new(DiffuseLight::from_color(Color::new(7.0, 7.0, 7.0)));
-    world.add(Quad::new(Point3::new(123.0, 554.0, 147.0), Vec3::new(300.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 265.0), light.clone()));
+    let light_quad = Arc::new(Quad::new(Point3::new(123.0, 554.0, 147.0), Vec3::new(300.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 265.0), light.clone()));
+    world.add_arc(light_quad.clone());
 
     // Moving sphere
     let center1 = Point3::new(400.0, 400.0, 200.0);
@@ -582,5 +583,5 @@ fn final_scene(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render(&world);
+    camera.render2(&world, light_quad.as_ref());
 }
