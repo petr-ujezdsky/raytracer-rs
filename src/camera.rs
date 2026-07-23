@@ -1,7 +1,11 @@
-use crate::color::{u32_to_color, write_color, Color};
+use crate::color::{Color, u32_to_color, write_color};
 use crate::frame_buffer::FrameBuffer;
 use crate::hittable::Hittable;
 use crate::interval::Interval;
+use crate::material::PdfOption::{Diffuse, Specular};
+use crate::material::DiffuseLight;
+use crate::pdf::{HittablePdf, MixturePdf, Pdf};
+use crate::quad::Quad;
 use crate::random::Random;
 use crate::ray::Ray;
 use crate::tile_manager::TileManager;
@@ -17,9 +21,6 @@ use std::io::{BufWriter, Write};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Instant;
-use crate::material::DiffuseLight;
-use crate::pdf::{CosinePdf, HittablePdf, MixturePdf, Pdf};
-use crate::quad::Quad;
 
 /// Config struct for [`Camera`](Camera) that enables usage of default parameters
 #[derive(Debug)]
@@ -462,20 +463,27 @@ impl Camera {
             let color_from_emission = material.emitted(r, &rec, rec.u, rec.v, rec.p);
 
             if let Some(scatter_record) = material.scatter(r, &rec, rng) {
-                let p0 = HittablePdf::new(lights, rec.p);
-                let p1 = CosinePdf::new(rec.normal);
-                let mixture_pdf = MixturePdf::new(&p0, &p1);
+                return match scatter_record.diffuse_or_specular {
+                    Specular(scattered_specular) => {
+                        // Specular -> skip all PDF work
+                        scatter_record.attenuation * self.ray_color(scattered_specular, depth - 1, world, lights, rng)
+                    }
+                    Diffuse(pdf) => {
+                        let light_ptr = HittablePdf::new(lights, rec.p);
+                        let mixture_pdf = MixturePdf::new(&light_ptr, pdf.as_ref());
 
-                let scattered = Ray::new(rec.p, mixture_pdf.generate(rng), r.time);
-                let pdf_value = mixture_pdf.value(scattered.direction, rng);
+                        let scattered = Ray::new(rec.p, mixture_pdf.generate(rng), r.time);
+                        let pdf_value = mixture_pdf.value(scattered.direction, rng);
 
-                let scattering_pdf = rec.mat_ptr.scattering_pdf(r, &rec, scattered, rng);
+                        let scattering_pdf = rec.mat_ptr.scattering_pdf(r, &rec, scattered, rng);
 
-                let sample_color = self.ray_color(scattered, depth - 1, world, lights, rng);
-                let color_from_scatter = scatter_record.attenuation * scattering_pdf * sample_color / pdf_value;
+                        let sample_color = self.ray_color(scattered, depth - 1, world, lights, rng);
+                        let color_from_scatter = (scatter_record.attenuation * scattering_pdf * sample_color) / pdf_value;
 
-                // Scattered -> combine both colors
-                return color_from_emission + color_from_scatter;
+                        // Scattered -> combine both colors
+                        color_from_emission + color_from_scatter
+                    }
+                }
             }
 
             // No scatter -> just emission

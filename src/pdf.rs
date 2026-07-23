@@ -14,6 +14,10 @@ pub trait Pdf: Send + Sync {
 /// PDF for whole sphere
 pub struct SpherePdf {}
 
+impl SpherePdf {
+    pub fn new() -> Self { Self {}}
+}
+
 impl Pdf for SpherePdf {
     fn value(&self, _direction: Vec3, _rng: &mut Random) -> f64 {
         1.0 / (4.0 * utils::PI)

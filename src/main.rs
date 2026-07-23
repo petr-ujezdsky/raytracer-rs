@@ -393,11 +393,14 @@ fn cornell_box() {
     world.add(Quad::new(Point3::new(0.0, 0.0, 555.0), Vec3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 555.0, 0.0), white.clone()));
 
     // boxes inside the cornell box
-    let mut box1: Arc<dyn Hittable> = Arc::new(Quad::create_box(Point3::zero(), Point3::new(165.0, 330.0, 165.0), white.clone()));
+    // Box 1
+    let aluminum = Arc::new(Metal::new(Color::new(0.8, 0.85, 0.88), 0.0));
+    let mut box1: Arc<dyn Hittable> = Arc::new(Quad::create_box(Point3::zero(), Point3::new(165.0, 330.0, 165.0), aluminum.clone()));
     box1 = Arc::new(RotateY::new(box1, 15.0));
     box1 = Arc::new(Translate::new(box1, Vec3::new(265.0, 0.0, 295.0)));
     world.add_arc(box1);
 
+    // Box 2
     let mut box2: Arc<dyn Hittable> = Arc::new(Quad::create_box(Point3::zero(), Point3::new(165.0, 165.0, 165.0), white.clone()));
     box2 = Arc::new(RotateY::new(box2, -18.0));
     box2 = Arc::new(Translate::new(box2, Vec3::new(130.0, 0.0, 65.0)));

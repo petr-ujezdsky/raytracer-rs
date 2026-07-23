@@ -1,22 +1,29 @@
-use std::sync::Arc;
 use crate::color::Color;
 use crate::hittable::HitRecord;
-use crate::onb::Onb;
+use crate::pdf::{CosinePdf, Pdf, SpherePdf};
 use crate::random::Random;
 use crate::ray::Ray;
 use crate::texture::{SolidColor, Texture};
 use crate::utils;
 use crate::vec3::Vec3;
+use std::sync::Arc;
+use crate::material::PdfOption::{Diffuse, Specular};
+
+pub enum PdfOption {
+    Diffuse(Box<dyn Pdf>),
+    Specular(Ray),
+}
 
 pub struct ScatterRecord {
     pub attenuation: Color,
-    pub scattered: Ray,
-    pub pdf: f64,
+    pub diffuse_or_specular: PdfOption,
 }
 
 /// Surface material.
 pub trait Material: Send + Sync {
-    fn scatter(&self, r_in: Ray, rec: &HitRecord<'_>, rng: &mut Random) -> Option<ScatterRecord>;
+    fn scatter(&self, _r_in: Ray, _rec: &HitRecord<'_>, _rng: &mut Random) -> Option<ScatterRecord> {
+        None
+    }
 
     fn emitted(&self, _r_in: Ray, _rec: &HitRecord<'_>, _u: f64, _v: f64, _p: Vec3) -> Color {
         Color::zero()
@@ -44,28 +51,19 @@ impl Lambertian {
 
 impl Material for Lambertian {
     fn scatter(&self, r_in: Ray, rec: &HitRecord<'_>, rng: &mut Random) -> Option<ScatterRecord> {
-        let uvw = Onb::new(rec.normal);
-        let scatter_direction = uvw.transform(Vec3::random_cosine_direction(rng)).unit_vector();
-
         Some(ScatterRecord {
             attenuation: self.tex.value(rec.u, rec.v, &rec.p),
-            scattered: Ray::new(rec.p, scatter_direction, r_in.time),
-            pdf: Vec3::dot(uvw.w, scatter_direction) / utils::PI,
+            diffuse_or_specular: Diffuse(Box::new(CosinePdf::new(rec.normal))),
         })
     }
 
-    // fn scattering_pdf(&self, _r_in: Ray, rec: &HitRecord<'_>, scattered: Ray, _rng: &mut Random) -> f64 {
-    //     let cos_theta = Vec3::dot(rec.normal, scattered.direction.unit_vector());
-    //
-    //     if cos_theta < 0.0 {
-    //         0.0
-    //     } else {
-    //         cos_theta / utils::PI
-    //     }
-    // }
+    fn scattering_pdf(&self, _r_in: Ray, rec: &HitRecord<'_>, scattered: Ray, _rng: &mut Random) -> f64 {
+        let cos_theta = Vec3::dot(rec.normal, scattered.direction.unit_vector());
+        if cos_theta < 0.0 {
+            return 0.0;
+        }
 
-    fn scattering_pdf(&self, _r_in: Ray, _rec: &HitRecord<'_>, _scattered: Ray, _rng: &mut Random) -> f64 {
-        1.0 / (2.0 * utils::PI)
+        cos_theta / utils::PI
     }
 }
 
@@ -94,8 +92,7 @@ impl Material for Metal {
 
         Some(ScatterRecord {
             attenuation: self.albedo,
-            scattered,
-            pdf: 0.0,
+            diffuse_or_specular: Specular(scattered),
         })
     }
 }
@@ -140,8 +137,7 @@ impl Material for Dielectric {
 
         Some(ScatterRecord {
             attenuation,
-            scattered,
-            pdf: 0.0,
+            diffuse_or_specular: Specular(scattered),
         })
     }
 }
@@ -189,14 +185,10 @@ impl Isotropic {
 }
 
 impl Material for Isotropic {
-    fn scatter(&self, r_in: Ray, rec: &HitRecord<'_>, rng: &mut Random) -> Option<ScatterRecord> {
-        let scattered = Ray::new(rec.p, Vec3::random_unit_vector(rng), r_in.time);
-        let attenuation = self.tex.value(rec.u, rec.v, &rec.p);
-
+    fn scatter(&self, _r_in: Ray, rec: &HitRecord<'_>, _rng: &mut Random) -> Option<ScatterRecord> {
         Some(ScatterRecord {
-            attenuation,
-            scattered,
-            pdf: 1.0 / (4.0 * utils::PI),
+            attenuation:self.tex.value(rec.u, rec.v, &rec.p),
+            diffuse_or_specular: Diffuse(Box::new(SpherePdf::new())),
         })
     }
 
