@@ -7,6 +7,7 @@ use crate::vec3::{Point3, Vec3};
 use std::sync::Arc;
 use crate::hittable_list::HittableList;
 use crate::random::Random;
+use crate::utils;
 
 #[derive(Clone)]
 pub struct Quad {
@@ -18,6 +19,7 @@ pub struct Quad {
     pub normal: Vec3,
     pub d: f64,
     pub w: Vec3,
+    pub area: f64,
 }
 
 impl Hittable for Quad {
@@ -51,6 +53,23 @@ impl Hittable for Quad {
     fn bounding_box(&self) -> &Aabb {
         &self.aabb
     }
+
+    fn pdf_value(&self, origin: Point3, direction: Vec3, rng: &mut Random) -> f64 {
+        if let Some(rec) = self.hit(Ray::new(origin, direction, 0.0), Interval::new(0.001, utils::INFINITY), rng) {
+            let distance_squared = rec.t * rec.t * direction.length_squared();
+            let cosine = f64::abs(Vec3::dot(direction, rec.normal) / direction.length());
+
+            return distance_squared / (cosine * self.area);
+        }
+
+        0.0
+    }
+
+    fn random(&self, origin: Point3, rng: &mut Random) -> Vec3 {
+        let p = self.q + rng.f64() * self.u + rng.f64() * self.v;
+
+        p - origin
+    }
 }
 
 impl Quad {
@@ -68,7 +87,8 @@ impl Quad {
             aabb: Self::compute_bounding_box(q, u, v),
             normal,
             d,
-            w
+            w,
+            area: n.length(),
         }
     }
 

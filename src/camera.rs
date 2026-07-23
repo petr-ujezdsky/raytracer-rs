@@ -14,9 +14,12 @@ use rayon::iter::ParallelIterator;
 use std::cmp::max;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Instant;
-use crate::pdf::{CosinePdf, Pdf};
+use crate::material::DiffuseLight;
+use crate::pdf::{CosinePdf, HittablePdf, MixturePdf, Pdf};
+use crate::quad::Quad;
 
 /// Config struct for [`Camera`](Camera) that enables usage of default parameters
 #[derive(Debug)]
@@ -231,6 +234,12 @@ impl Camera {
     }
 
     pub fn render(&self, world: &dyn Hittable) {
+        let light = Arc::new(DiffuseLight::from_color(Color::new(15.0, 15.0, 15.0)));
+        let lights = Quad::new(Point3::new(343.0, 554.0, 332.0), Vec3::new(-130.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -105.0), light.clone());
+        self.render2(world, &lights);
+    }
+
+    pub fn render2(&self, world: &dyn Hittable, lights: &dyn Hittable) {
         let width = self.image_width as usize;
         let height = self.image_height as usize;
 
@@ -253,7 +262,7 @@ impl Camera {
 
             std::thread::scope(|scope| {
                 scope.spawn(|| {
-                    if self.render_frame_buffer(world, &frame_buffer, &tile_manager, &cancelled) {
+                    if self.render_frame_buffer(world, lights, &frame_buffer, &tile_manager, &cancelled) {
                         self.write_output(&frame_buffer);
                     }
                     render_done.store(true, Ordering::Relaxed);
@@ -279,6 +288,7 @@ impl Camera {
     fn render_frame_buffer(
         &self,
         world: &dyn Hittable,
+        lights: &dyn Hittable,
         frame_buffer: &FrameBuffer,
         tile_manager: &TileManager,
         cancelled: &AtomicBool,
@@ -326,7 +336,7 @@ impl Camera {
                         for s_i in 0..self.sqrt_spp {
                             let r = self.get_ray(i, j, s_i, s_j, &mut rng);
                             // trace the ray and accumulate color
-                            pixel_color += self.ray_color(r, self.max_depth, world, &mut rng);
+                            pixel_color += self.ray_color(r, self.max_depth, world, lights, &mut rng);
                         }
                     }
 
@@ -439,7 +449,7 @@ impl Camera {
         cancelled.store(true, Ordering::Relaxed);
     }
 
-    fn ray_color(&self, r: Ray, depth: u32, world: &dyn Hittable, rng: &mut Random) -> Color {
+    fn ray_color(&self, r: Ray, depth: u32, world: &dyn Hittable, lights: &dyn Hittable, rng: &mut Random) -> Color {
         // If we've exceeded the ray bounce limit, no more light is gathered.
         if depth <= 0 {
             return Color::zero();
@@ -452,13 +462,17 @@ impl Camera {
             let color_from_emission = material.emitted(r, &rec, rec.u, rec.v, rec.p);
 
             if let Some(scatter_record) = material.scatter(r, &rec, rng) {
-                let surface_pdf = CosinePdf::new(rec.normal);
-                let scattered = Ray::new(rec.p, surface_pdf.generate(rng), r.time);
-                let pdf_value = surface_pdf.value(scattered.direction, rng);
+                let p0 = HittablePdf::new(lights, rec.p);
+                let p1 = CosinePdf::new(rec.normal);
+                let mixture_pdf = MixturePdf::new(&p0, &p1);
+
+                let scattered = Ray::new(rec.p, mixture_pdf.generate(rng), r.time);
+                let pdf_value = mixture_pdf.value(scattered.direction, rng);
 
                 let scattering_pdf = rec.mat_ptr.scattering_pdf(r, &rec, scattered, rng);
 
-                let color_from_scatter = scatter_record.attenuation * scattering_pdf * self.ray_color(scattered, depth - 1, world, rng) / pdf_value;
+                let sample_color = self.ray_color(scattered, depth - 1, world, lights, rng);
+                let color_from_scatter = scatter_record.attenuation * scattering_pdf * sample_color / pdf_value;
 
                 // Scattered -> combine both colors
                 return color_from_emission + color_from_scatter;

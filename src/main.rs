@@ -387,7 +387,7 @@ fn cornell_box() {
     // cornell sides
     world.add(Quad::new(Point3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 555.0, 0.0), Vec3::new(0.0, 0.0, 555.0), green));
     world.add(Quad::new(Point3::zero(), Vec3::new(0.0, 555.0, 0.0), Vec3::new(0.0, 0.0, 555.0), red));
-    world.add(Quad::new(Point3::new(343.0, 554.0, 332.0), Vec3::new(-130.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -105.0), light));
+    world.add(Quad::new(Point3::new(343.0, 554.0, 332.0), Vec3::new(-130.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -105.0), light.clone()));
     world.add(Quad::new(Point3::zero(), Vec3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 555.0), white.clone()));
     world.add(Quad::new(Point3::new(555.0, 555.0, 555.0), Vec3::new(-555.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -555.0), white.clone()));
     world.add(Quad::new(Point3::new(0.0, 0.0, 555.0), Vec3::new(555.0, 0.0, 0.0), Vec3::new(0.0, 555.0, 0.0), white.clone()));
@@ -402,6 +402,10 @@ fn cornell_box() {
     box2 = Arc::new(RotateY::new(box2, -18.0));
     box2 = Arc::new(Translate::new(box2, Vec3::new(130.0, 0.0, 65.0)));
     world.add_arc(box2);
+
+    // Light sources
+    // let empty_material = Arc::new();
+    let lights = Quad::new(Point3::new(343.0, 554.0, 332.0), Vec3::new(-130.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -105.0), light.clone());
 
     // Camera
     let camera = Camera::new(CameraConfig {
@@ -423,7 +427,7 @@ fn cornell_box() {
         ..Default::default()
     });
 
-    camera.render(&world);
+    camera.render2(&world, &lights);
 }
 
 fn cornell_smoke() {

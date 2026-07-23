@@ -38,6 +38,16 @@ pub trait Hittable: Send + Sync {
 
     /// Returns bounding box for given object
     fn bounding_box(&self) -> &Aabb;
+
+    /// PDF for random() function
+    fn pdf_value(&self, _origin: Point3, _direction: Vec3, _rng: &mut Random) -> f64 {
+        0.0
+    }
+
+    /// generates vector from origin to random point on the surface using PDF as pdf_value()
+    fn random(&self, _origin: Point3, _rng: &mut Random) -> Vec3 {
+        Vec3::new(1.0, 0.0, 0.0)
+    }
 }
 
 fn front_face(ray: Ray, outward_normal: Vec3) -> bool {
