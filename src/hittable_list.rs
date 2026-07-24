@@ -4,6 +4,7 @@ use crate::hittable::{HitRecord, Hittable};
 use crate::interval::Interval;
 use crate::random::Random;
 use crate::ray::Ray;
+use crate::vec3::{Point3, Vec3};
 
 /// List of hittable objects.
 #[derive(Default)]
@@ -47,4 +48,20 @@ impl Hittable for HittableList {
     }
 
     fn bounding_box(&self) -> &Aabb { &self.bbox }
+
+    fn pdf_value(&self, origin: Point3, direction: Vec3, rng: &mut Random) -> f64 {
+        let weight = 1.0 / self.objects.len() as f64;
+        let mut sum = 0.0;
+
+        for object in self.objects.iter() {
+            sum += weight * object.pdf_value(origin, direction, rng);
+        }
+
+        sum
+    }
+
+    fn random(&self, origin: Point3, rng: &mut Random) -> Vec3 {
+        let int_size = self.objects.len();
+        self.objects[rng.range(0..int_size)].random(origin, rng)
+    }
 }

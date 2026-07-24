@@ -1,12 +1,13 @@
-use std::sync::Arc;
 use crate::aabb::Aabb;
 use crate::hittable::{HitRecord, Hittable};
 use crate::interval::Interval;
 use crate::material::Material;
+use crate::onb::Onb;
 use crate::random::Random;
 use crate::ray::Ray;
 use crate::utils;
 use crate::vec3::{Point3, Vec3};
+use std::sync::Arc;
 
 /// Records information about a ray-object intersection.
 #[derive(Clone)]
@@ -54,6 +55,27 @@ impl Hittable for Sphere {
     }
 
     fn bounding_box(&self) -> &Aabb { &self.bbox }
+
+    fn pdf_value(&self, origin: Point3, direction: Vec3, rng: &mut Random) -> f64 {
+        // This method only works for stationary spheres.
+
+        if let None = self.hit(Ray::new(origin, direction, 0.0), Interval::new(0.001, utils::INFINITY), rng) {
+            return 0.0;
+        }
+
+        let dist_squared = (self.center.at(0.0) - origin).length_squared();
+        let cos_theta_max = f64::sqrt(1.0 - self.radius*self.radius/dist_squared);
+        let solid_angle = 2.0 * utils::PI * (1.0 - cos_theta_max);
+
+        1.0 / solid_angle
+    }
+
+    fn random(&self, origin: Point3, rng: &mut Random) -> Vec3 {
+        let direction = self.center.at(0.0) - origin;
+        let distance_squared = direction.length_squared();
+        let uvw = Onb::new(direction);
+        uvw.transform(self.random_to_sphere(distance_squared, rng))
+    }
 }
 
 impl Sphere {
@@ -97,5 +119,17 @@ impl Sphere {
         let v = theta / utils::PI;
 
         (u, v)
+    }
+
+    fn random_to_sphere(&self, distance_squared: f64, rng: &mut Random) -> Vec3 {
+        let r1 = rng.f64();
+        let r2 = rng.f64();
+        let z = 1.0 + r2 * (f64::sqrt(1.0 - self.radius * self.radius / distance_squared) - 1.0);
+
+        let phi = 2.0 * utils::PI * r1;
+        let x = f64::cos(phi) * f64::sqrt(1.0 - z * z);
+        let y = f64::sin(phi) * f64::sqrt(1.0 - z * z);
+
+        Vec3::new(x, y, z)
     }
 }

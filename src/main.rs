@@ -403,11 +403,21 @@ fn cornell_box(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     box1 = Arc::new(Translate::new(box1, Vec3::new(265.0, 0.0, 295.0)));
     world.add_arc(box1);
 
-    // Box 2
-    let mut box2: Arc<dyn Hittable> = Arc::new(Quad::create_box(Point3::zero(), Point3::new(165.0, 165.0, 165.0), white.clone()));
-    box2 = Arc::new(RotateY::new(box2, -18.0));
-    box2 = Arc::new(Translate::new(box2, Vec3::new(130.0, 0.0, 65.0)));
-    world.add_arc(box2);
+    // // Box 2
+    // let mut box2: Arc<dyn Hittable> = Arc::new(Quad::create_box(Point3::zero(), Point3::new(165.0, 165.0, 165.0), white.clone()));
+    // box2 = Arc::new(RotateY::new(box2, -18.0));
+    // box2 = Arc::new(Translate::new(box2, Vec3::new(130.0, 0.0, 65.0)));
+    // world.add_arc(box2);
+
+    // Glass Sphere
+    let glass = Arc::new(Dielectric::new(1.5));
+    let sphere = Arc::new(Sphere::new(Point3::new(190.0, 90.0, 190.0), 90.0, glass));
+    world.add_arc(sphere.clone());
+
+    // Light sources
+    let mut lights = HittableList::default();
+    lights.add(Quad::new(Vec3::new(343.0, 554.0, 332.0), Vec3::new(-130.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -105.0), white.clone()));
+    lights.add(Sphere::new(Point3::new(190.0, 90.0, 190.0), 90.0, white.clone()));
 
     // Camera
     let camera = Camera::new(CameraConfig {
@@ -429,7 +439,7 @@ fn cornell_box(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render2(&world, quad_light.as_ref());
+    camera.render2(&world, &lights);
 }
 
 fn cornell_smoke(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
