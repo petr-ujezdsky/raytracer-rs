@@ -337,7 +337,11 @@ impl Camera {
                         for s_i in 0..self.sqrt_spp {
                             let r = self.get_ray(i, j, s_i, s_j, &mut rng);
                             // trace the ray and accumulate color
-                            pixel_color += self.ray_color(r, self.max_depth, world, lights, &mut rng);
+                            let mut sample_color = self.ray_color(r, self.max_depth, world, lights, &mut rng);
+                            if sample_color.has_nan() {
+                                sample_color = Color::zero();
+                            }
+                            pixel_color += sample_color;
                         }
                     }
 

@@ -213,6 +213,10 @@ impl Vec3 {
             z: self.x * o.y - self.y * o.x,
         }
     }
+
+    pub fn has_nan(&self) -> bool {
+        self.x.is_nan() || self.y.is_nan() || self.z.is_nan()
+    }
 }
 
 #[cfg(test)]
