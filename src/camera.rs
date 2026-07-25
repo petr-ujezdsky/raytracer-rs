@@ -3,9 +3,7 @@ use crate::frame_buffer::FrameBuffer;
 use crate::hittable::Hittable;
 use crate::interval::Interval;
 use crate::material::PdfOption::{Diffuse, Specular};
-use crate::material::DiffuseLight;
 use crate::pdf::{HittablePdf, MixturePdf, Pdf};
-use crate::quad::Quad;
 use crate::random::Random;
 use crate::ray::Ray;
 use crate::tile_manager::TileManager;
@@ -18,7 +16,6 @@ use rayon::iter::ParallelIterator;
 use std::cmp::max;
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Instant;
 
@@ -234,13 +231,7 @@ impl Camera {
         }
     }
 
-    pub fn render(&self, world: &dyn Hittable) {
-        let light = Arc::new(DiffuseLight::from_color(Color::new(15.0, 15.0, 15.0)));
-        let lights = Quad::new(Point3::new(343.0, 554.0, 332.0), Vec3::new(-130.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -105.0), light.clone());
-        self.render2(world, &lights);
-    }
-
-    pub fn render2(&self, world: &dyn Hittable, lights: &dyn Hittable) {
+    pub fn render(&self, world: &dyn Hittable, lights: Option<&dyn Hittable>) {
         let width = self.image_width as usize;
         let height = self.image_height as usize;
 
@@ -289,7 +280,7 @@ impl Camera {
     fn render_frame_buffer(
         &self,
         world: &dyn Hittable,
-        lights: &dyn Hittable,
+        lights: Option<&dyn Hittable>,
         frame_buffer: &FrameBuffer,
         tile_manager: &TileManager,
         cancelled: &AtomicBool,
@@ -454,7 +445,7 @@ impl Camera {
         cancelled.store(true, Ordering::Relaxed);
     }
 
-    fn ray_color(&self, r: Ray, depth: u32, world: &dyn Hittable, lights: &dyn Hittable, rng: &mut Random) -> Color {
+    fn ray_color(&self, r: Ray, depth: u32, world: &dyn Hittable, lights: Option<&dyn Hittable>, rng: &mut Random) -> Color {
         // If we've exceeded the ray bounce limit, no more light is gathered.
         if depth <= 0 {
             return Color::zero();
@@ -473,11 +464,18 @@ impl Camera {
                         scatter_record.attenuation * self.ray_color(scattered_specular, depth - 1, world, lights, rng)
                     }
                     Diffuse(pdf) => {
-                        let light_ptr = HittablePdf::new(lights, rec.p);
-                        let mixture_pdf = MixturePdf::new(&light_ptr, pdf.as_ref());
-
-                        let scattered = Ray::new(rec.p, mixture_pdf.generate(rng), r.time);
-                        let pdf_value = mixture_pdf.value(scattered.direction, rng);
+                        let (scattered, pdf_value) = if let Some(light) = lights {
+                            let light_ptr = HittablePdf::new(light, rec.p);
+                            // mix both PDFs
+                            let mixture_pdf = MixturePdf::new(&light_ptr, pdf.as_ref());
+                            let scattered = Ray::new(rec.p, mixture_pdf.generate(rng), r.time);
+                            let pdf_value = mixture_pdf.value(scattered.direction, rng);
+                            (scattered, pdf_value)
+                        } else {
+                            let scattered = Ray::new(rec.p, pdf.generate(rng), r.time);
+                            let pdf_value = pdf.value(scattered.direction, rng);
+                            (scattered, pdf_value)
+                        };
 
                         let scattering_pdf = rec.mat_ptr.scattering_pdf(r, &rec, scattered, rng);
 

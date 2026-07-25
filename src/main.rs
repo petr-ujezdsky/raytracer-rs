@@ -92,7 +92,7 @@ fn three_spheres(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render(&world);
+    camera.render(&world, None);
 }
 
 fn bouncing_spheres(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
@@ -169,7 +169,7 @@ fn bouncing_spheres(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render(&world);
+    camera.render(&world, None);
 }
 
 fn checkered_spheres(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
@@ -208,7 +208,7 @@ fn checkered_spheres(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render(&world);
+    camera.render(&world, None);
 }
 
 fn earth(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
@@ -247,7 +247,7 @@ fn earth(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render(&world);
+    camera.render(&world, None);
 }
 
 fn perlin_spheres(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
@@ -283,7 +283,7 @@ fn perlin_spheres(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render(&world);
+    camera.render(&world, None);
 }
 
 fn quads(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
@@ -327,7 +327,7 @@ fn quads(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render(&world);
+    camera.render(&world, None);
 }
 
 fn simple_light(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
@@ -350,6 +350,11 @@ fn simple_light(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
     let light_quad = Arc::new(Quad::new(Point3::new(3.0, 1.0, -2.0), Vec3::new(2.0, 0.0, 0.0), Vec3::new(0.0, 2.0, 0.0), difflight));
     world.add_arc(light_quad.clone());
 
+
+    let mut lights = HittableList::default();
+    lights.add_arc(light_sphere.clone());
+    lights.add_arc(light_quad.clone());
+
     // Camera
     let camera = Camera::new(CameraConfig {
         image_width,
@@ -369,7 +374,7 @@ fn simple_light(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render2(&world, light_quad.as_ref());
+    camera.render(&world, Some(&lights));
 }
 
 fn cornell_box(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
@@ -439,7 +444,7 @@ fn cornell_box(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render2(&world, &lights);
+    camera.render(&world, Some(&lights));
 }
 
 fn cornell_smoke(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
@@ -498,7 +503,7 @@ fn cornell_smoke(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render2(&world, light_quad.as_ref());
+    camera.render(&world, Some(light_quad.as_ref()));
 }
 
 fn final_scene(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
@@ -593,5 +598,5 @@ fn final_scene(image_width: u32, samples_per_pixel: u32, max_depth: u32) {
         ..Default::default()
     });
 
-    camera.render2(&world, light_quad.as_ref());
+    camera.render(&world, Some(light_quad.as_ref()));
 }
